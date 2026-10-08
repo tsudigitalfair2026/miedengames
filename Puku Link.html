@@ -1,0 +1,2970 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+  >
+  <meta name="theme-color" content="#7dd8ff">
+  <title>ぷくリンク</title>
+
+  <style>
+    :root {
+      --ink: #38405f;
+      --pink: #ff78ae;
+      --pink-dark: #e95592;
+      --yellow: #ffe083;
+      --blue: #75d6ff;
+      --green: #87e7b0;
+      --purple: #bca3ff;
+      --white: #fffdf8;
+      --panel: rgba(255, 255, 255, 0.9);
+      --shadow: 0 8px 0 rgba(67, 80, 130, 0.16);
+      --board-size: min(92vw, 52dvh, 470px);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+      background: #a8e8ff;
+      color: var(--ink);
+      font-family:
+        system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    }
+
+    body {
+      min-height: 100dvh;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    button {
+      min-height: 44px;
+      border: 0;
+      color: var(--ink);
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    button:focus-visible {
+      outline: 4px solid #335dff;
+      outline-offset: 3px;
+    }
+
+    .app {
+      position: relative;
+      width: 100%;
+      min-height: 100dvh;
+      overflow: hidden;
+      isolation: isolate;
+      background:
+        radial-gradient(circle at 12% 15%, rgba(255,255,255,.8) 0 5px, transparent 6px),
+        radial-gradient(circle at 85% 22%, rgba(255,255,255,.65) 0 8px, transparent 9px),
+        radial-gradient(circle at 22% 78%, rgba(255,255,255,.6) 0 6px, transparent 7px),
+        radial-gradient(circle at 78% 82%, rgba(255,255,255,.75) 0 4px, transparent 5px),
+        linear-gradient(160deg, #87dcff 0%, #c9f6ff 48%, #fff2ba 100%);
+    }
+
+    .decorations,
+    .decorations::before,
+    .decorations::after {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      content: "";
+    }
+
+    .decorations {
+      opacity: 0.65;
+      background-image:
+        radial-gradient(circle, #ff8ab9 0 3px, transparent 4px),
+        radial-gradient(circle, #fff 0 4px, transparent 5px);
+      background-position: 20px 35px, 70px 80px;
+      background-size: 100px 100px, 140px 140px;
+    }
+
+    .decorations::before {
+      background:
+        conic-gradient(from 0deg at 50% 50%,
+          transparent 0 10%,
+          rgba(255,255,255,.8) 10% 14%,
+          transparent 14% 36%,
+          rgba(255,255,255,.8) 36% 40%,
+          transparent 40% 62%,
+          rgba(255,255,255,.8) 62% 66%,
+          transparent 66% 88%,
+          rgba(255,255,255,.8) 88% 92%,
+          transparent 92%);
+      width: 26px;
+      height: 26px;
+      inset: 10% auto auto 8%;
+      animation: spin 8s linear infinite;
+    }
+
+    .decorations::after {
+      width: 18px;
+      height: 18px;
+      inset: auto 8% 12% auto;
+      border: 5px solid rgba(255,255,255,.8);
+      border-radius: 50%;
+      box-shadow:
+        -30px -20px 0 -3px rgba(255,255,255,.7),
+        20px -55px 0 2px rgba(255,255,255,.45);
+      animation: float 3s ease-in-out infinite alternate;
+    }
+
+    .screen {
+      display: none;
+      width: 100%;
+      min-height: 100dvh;
+      padding:
+        max(10px, env(safe-area-inset-top))
+        max(10px, env(safe-area-inset-right))
+        max(10px, env(safe-area-inset-bottom))
+        max(10px, env(safe-area-inset-left));
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    .title-screen {
+      align-items: center;
+      justify-content: center;
+      overflow-y: auto;
+    }
+
+    .title-card,
+    .result-card {
+      width: min(94vw, 470px);
+      max-height: calc(100dvh - 20px);
+      overflow-y: auto;
+      padding: 18px;
+      text-align: center;
+      border: 4px solid rgba(255,255,255,.85);
+      border-radius: 32px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      scrollbar-width: none;
+    }
+
+    .title-card::-webkit-scrollbar,
+    .result-card::-webkit-scrollbar {
+      display: none;
+    }
+
+    .logo {
+      margin: 0;
+      color: #f14f93;
+      font-size: clamp(2.5rem, 13vw, 4.7rem);
+      line-height: 0.95;
+      letter-spacing: 0.04em;
+      text-shadow:
+        0 4px 0 #fff,
+        0 7px 0 rgba(99, 59, 128, 0.14);
+      transform: rotate(-2deg);
+    }
+
+    .subtitle {
+      margin: 10px 0 12px;
+      font-size: 0.92rem;
+      font-weight: 800;
+    }
+
+    /* オリジナルキャラクター「ぷく」のCSS描画 */
+    .character-area {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      min-height: 112px;
+    }
+
+    .character {
+      position: relative;
+      width: 94px;
+      height: 82px;
+      flex: 0 0 auto;
+      border: 4px solid #493c71;
+      border-radius: 50% 50% 46% 46% / 58% 58% 42% 42%;
+      background: linear-gradient(145deg, #ffbad7, #ff75ad);
+      box-shadow:
+        inset 9px 9px 0 rgba(255,255,255,.28),
+        0 7px 0 rgba(73,60,113,.15);
+      transform-origin: 50% 100%;
+      animation: breathe 1.8s ease-in-out infinite;
+    }
+
+    .character::before,
+    .character::after {
+      position: absolute;
+      bottom: -8px;
+      width: 24px;
+      height: 18px;
+      content: "";
+      border: 4px solid #493c71;
+      border-radius: 50%;
+      background: #ff91bd;
+      z-index: -1;
+    }
+
+    .character::before {
+      left: 8px;
+      transform: rotate(-15deg);
+    }
+
+    .character::after {
+      right: 8px;
+      transform: rotate(15deg);
+    }
+
+    .sprout {
+      position: absolute;
+      top: -23px;
+      left: 35px;
+      width: 21px;
+      height: 28px;
+      border: 4px solid #493c71;
+      border-radius: 70% 15% 70% 20%;
+      background: #89e69f;
+      transform: rotate(28deg);
+      z-index: -1;
+    }
+
+    .eye {
+      position: absolute;
+      top: 30px;
+      width: 9px;
+      height: 12px;
+      border-radius: 50%;
+      background: #493c71;
+      transition: .15s;
+    }
+
+    .eye.left {
+      left: 25px;
+    }
+
+    .eye.right {
+      right: 25px;
+    }
+
+    .mouth {
+      position: absolute;
+      left: 50%;
+      top: 51px;
+      width: 19px;
+      height: 10px;
+      border-bottom: 4px solid #493c71;
+      border-radius: 0 0 50% 50%;
+      transform: translateX(-50%);
+      transition: .15s;
+    }
+
+    .cheek {
+      position: absolute;
+      top: 48px;
+      width: 14px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 54, 112, .35);
+    }
+
+    .cheek.left {
+      left: 9px;
+    }
+
+    .cheek.right {
+      right: 9px;
+    }
+
+    .character.combo {
+      animation: characterCombo .42s ease-in-out 3;
+    }
+
+    .character.combo .eye {
+      height: 6px;
+      border-radius: 50% 50% 0 0;
+      transform: translateY(3px);
+    }
+
+    .character.combo .mouth {
+      height: 15px;
+      border: 4px solid #493c71;
+      border-top: 0;
+      background: #fff;
+    }
+
+    .character.danger {
+      background: linear-gradient(145deg, #ffd2ae, #ff7c75);
+      animation: dangerBounce .54s ease-in-out infinite alternate;
+    }
+
+    .character.danger .eye {
+      height: 14px;
+      transform: scaleX(.7);
+    }
+
+    .character.danger .mouth {
+      width: 14px;
+      height: 14px;
+      border: 4px solid #493c71;
+      border-radius: 50%;
+      background: #8f4267;
+    }
+
+    .character.over {
+      animation: none;
+      transform: rotate(8deg) translateY(5px);
+      filter: saturate(.65);
+    }
+
+    .character.over .eye {
+      height: 4px;
+      border-radius: 0;
+      transform: rotate(18deg);
+    }
+
+    .character.over .eye.right {
+      transform: rotate(-18deg);
+    }
+
+    .character.over .mouth {
+      top: 58px;
+      border-bottom: 0;
+      border-top: 4px solid #493c71;
+      border-radius: 50% 50% 0 0;
+    }
+
+    .character-text {
+      max-width: 190px;
+      padding: 9px 12px;
+      text-align: left;
+      font-size: .82rem;
+      font-weight: 750;
+      line-height: 1.45;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 4px 0 rgba(66,73,120,.1);
+    }
+
+    .character-text strong {
+      color: #ef4c8e;
+      font-size: 1.05rem;
+    }
+
+    .difficulty-title {
+      margin: 4px 0 8px;
+      font-size: 1rem;
+    }
+
+    .difficulty-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+    }
+
+    .difficulty-button {
+      min-width: 0;
+      padding: 10px 4px;
+      border: 3px solid transparent;
+      border-radius: 17px;
+      background: #edf2ff;
+      box-shadow: 0 4px 0 rgba(57,63,105,.14);
+      font-size: clamp(.72rem, 3.4vw, .9rem);
+      transition: transform .12s, background .12s, border-color .12s;
+    }
+
+    .difficulty-button span {
+      display: block;
+      margin-top: 2px;
+      font-size: .67rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .difficulty-button.selected {
+      border-color: #ff5f9d;
+      background: #ffe3ef;
+      transform: translateY(-2px);
+    }
+
+    .button-row {
+      display: flex;
+      gap: 9px;
+      margin-top: 13px;
+    }
+
+    .primary-button,
+    .secondary-button,
+    .icon-button {
+      border-radius: 18px;
+      box-shadow: 0 5px 0 rgba(59,62,105,.17);
+      transition: transform .1s, box-shadow .1s;
+    }
+
+    .primary-button {
+      flex: 1;
+      padding: 12px;
+      color: #fff;
+      background: linear-gradient(#ff78ad, #f15191);
+      text-shadow: 0 2px rgba(120,30,74,.2);
+    }
+
+    .secondary-button {
+      flex: 1;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .icon-button {
+      min-width: 46px;
+      padding: 8px 11px;
+      background: rgba(255,255,255,.94);
+      font-size: 1.05rem;
+    }
+
+    button:active {
+      transform: translateY(3px) scale(.97);
+      box-shadow: 0 2px 0 rgba(59,62,105,.17);
+    }
+
+    /* ゲーム画面 */
+    .game-screen {
+      position: relative;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding-top: max(6px, env(safe-area-inset-top));
+      padding-bottom: max(6px, env(safe-area-inset-bottom));
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 5px;
+      width: min(96vw, 510px);
+    }
+
+    .hud-box {
+      min-width: 0;
+      padding: 6px 4px;
+      text-align: center;
+      border: 2px solid rgba(255,255,255,.8);
+      border-radius: 14px;
+      background: rgba(255,255,255,.9);
+      box-shadow: 0 3px 0 rgba(60,70,110,.1);
+    }
+
+    .hud-label {
+      display: block;
+      font-size: clamp(.58rem, 2.5vw, .72rem);
+      font-weight: 850;
+      opacity: .78;
+    }
+
+    .hud-value {
+      display: block;
+      overflow: hidden;
+      font-size: clamp(.9rem, 4.2vw, 1.25rem);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.15;
+      text-overflow: ellipsis;
+    }
+
+    .timer-box.warning {
+      color: #d74663;
+      background: #fff0a9;
+    }
+
+    .timer-box.danger {
+      color: #fff;
+      background: #ee4d67;
+      animation: timerPulse .5s ease-in-out infinite alternate;
+    }
+
+    .game-tools {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .game-tools .icon-button {
+      min-width: 42px;
+      min-height: 34px;
+      padding: 3px 7px;
+      border-radius: 12px;
+      font-size: .9rem;
+    }
+
+    .game-character-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: min(94vw, 490px);
+      min-height: 66px;
+    }
+
+    .game-character-row .character {
+      width: 67px;
+      height: 58px;
+      border-width: 3px;
+    }
+
+    .game-character-row .sprout {
+      top: -17px;
+      left: 25px;
+      width: 15px;
+      height: 21px;
+      border-width: 3px;
+    }
+
+    .game-character-row .eye {
+      top: 21px;
+      width: 7px;
+      height: 9px;
+    }
+
+    .game-character-row .eye.left {
+      left: 17px;
+    }
+
+    .game-character-row .eye.right {
+      right: 17px;
+    }
+
+    .game-character-row .mouth {
+      top: 36px;
+      width: 15px;
+      height: 8px;
+      border-width: 3px;
+    }
+
+    .game-character-row .cheek {
+      top: 34px;
+      width: 10px;
+      height: 6px;
+    }
+
+    .game-character-row .character::before,
+    .game-character-row .character::after {
+      width: 18px;
+      height: 13px;
+      border-width: 3px;
+      bottom: -7px;
+    }
+
+    .status-bubble {
+      max-width: calc(100% - 78px);
+      padding: 8px 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.9);
+      box-shadow: 0 3px 0 rgba(59,62,105,.12);
+      font-size: clamp(.72rem, 3vw, .9rem);
+      font-weight: 850;
+    }
+
+    .board-wrap {
+      position: relative;
+      width: var(--board-size);
+      height: var(--board-size);
+      flex: 0 0 auto;
+    }
+
+    .board {
+      position: relative;
+      display: grid;
+      width: 100%;
+      height: 100%;
+      gap: clamp(2px, .8vw, 5px);
+      padding: clamp(5px, 1.5vw, 9px);
+      border: 4px solid rgba(255,255,255,.88);
+      border-radius: 24px;
+      background: rgba(73,70,128,.18);
+      box-shadow:
+        0 8px 0 rgba(74,73,121,.16),
+        inset 0 0 20px rgba(255,255,255,.2);
+      touch-action: none;
+      isolation: isolate;
+    }
+
+    .connection-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    .connection-line {
+      fill: none;
+      stroke: rgba(255,255,255,.92);
+      stroke-width: 10;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 5px rgba(255,84,155,.9));
+    }
+
+    .piece {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      border: 3px solid rgba(255,255,255,.75);
+      border-radius: 30%;
+      box-shadow:
+        0 3px 0 rgba(62,57,104,.15),
+        inset 0 3px 0 rgba(255,255,255,.34);
+      font-size: calc(var(--board-size) / var(--size) * .52);
+      font-weight: 900;
+      line-height: 1;
+      text-shadow: 0 2px 0 rgba(255,255,255,.5);
+      transition:
+        transform .12s ease,
+        filter .12s ease,
+        opacity .18s ease;
+      will-change: transform, opacity;
+    }
+
+    .piece[data-type="0"] {
+      color: #c73568;
+      background: #ff93b9;
+      border-radius: 50%;
+    }
+
+    .piece[data-type="1"] {
+      color: #2970b7;
+      background: #7fd7ff;
+      border-radius: 25%;
+    }
+
+    .piece[data-type="2"] {
+      color: #be811a;
+      background: #ffe277;
+      clip-path: polygon(
+        50% 0%, 61% 35%, 98% 35%, 68% 57%,
+        79% 94%, 50% 72%, 21% 94%, 32% 57%,
+        2% 35%, 39% 35%
+      );
+      border: 0;
+    }
+
+    .piece[data-type="3"] {
+      color: #277c68;
+      background: #83e2b2;
+      border-radius: 50% 25% 50% 25%;
+      transform: rotate(45deg) scale(.86);
+    }
+
+    .piece[data-type="3"] .piece-symbol {
+      transform: rotate(-45deg);
+    }
+
+    .piece[data-type="4"] {
+      color: #6847ae;
+      background: #c5adff;
+      border-radius: 45% 45% 15% 45%;
+    }
+
+    .piece[data-type="5"] {
+      color: #c65f21;
+      background: #ffad73;
+      border-radius: 50% 20%;
+    }
+
+    .piece[data-type="6"] {
+      color: #267a91;
+      background: #8ee9e5;
+      clip-path: polygon(
+        50% 0%, 90% 25%, 83% 75%,
+        50% 100%, 17% 75%, 10% 25%
+      );
+      border: 0;
+    }
+
+    .piece.selected {
+      z-index: 5;
+      filter:
+        brightness(1.18)
+        drop-shadow(0 0 7px #fff)
+        drop-shadow(0 0 9px #ff4f9c);
+      transform: scale(1.16);
+    }
+
+    .piece[data-type="3"].selected {
+      transform: rotate(45deg) scale(1.02);
+    }
+
+    .piece.hint {
+      z-index: 4;
+      animation: hintPulse .7s ease-in-out 3;
+    }
+
+    .piece.removing {
+      pointer-events: none;
+      animation: popOut .27s ease-in forwards;
+    }
+
+    .piece.appear {
+      animation: appear .22s ease-out;
+    }
+
+    .piece.bomb {
+      overflow: visible;
+      color: #fff;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 28%, #fff 0 8%, transparent 9%),
+        radial-gradient(circle, #566179 0 48%, #27324f 50% 70%, #ff6b8c 72%);
+      clip-path: none;
+      animation: specialGlow 1.1s ease-in-out infinite alternate;
+    }
+
+    .piece.bomb::after {
+      position: absolute;
+      top: -13%;
+      right: 4%;
+      width: 25%;
+      height: 27%;
+      content: "";
+      border-radius: 50% 50% 0;
+      background: #ffe477;
+      transform: rotate(25deg);
+      box-shadow: 0 0 7px #fff38a;
+    }
+
+    .piece.rainbow {
+      overflow: visible;
+      color: #fff;
+      border-radius: 50%;
+      background:
+        conic-gradient(
+          #ff648f,
+          #ffdc67,
+          #74e6a5,
+          #6dd5ff,
+          #b596ff,
+          #ff648f
+        );
+      clip-path: none;
+      animation: rainbowSpin 1.6s linear infinite;
+    }
+
+    .piece.rainbow::before {
+      position: absolute;
+      inset: 17%;
+      content: "";
+      border: 3px solid rgba(255,255,255,.9);
+      border-radius: 50%;
+      background: rgba(255,255,255,.22);
+    }
+
+    .piece.rainbow-armed {
+      filter:
+        brightness(1.2)
+        drop-shadow(0 0 8px #fff)
+        drop-shadow(0 0 13px #ff55aa);
+      animation-duration: .7s;
+    }
+
+    .board.locked .piece {
+      pointer-events: none;
+    }
+
+    .board.special-flash {
+      animation: boardFlash .36s ease-out;
+    }
+
+    .combo-float {
+      position: absolute;
+      left: 50%;
+      top: 45%;
+      z-index: 30;
+      pointer-events: none;
+      color: #fff;
+      font-size: clamp(1.5rem, 8vw, 3rem);
+      font-weight: 1000;
+      text-align: center;
+      text-shadow:
+        0 3px 0 #ef4e91,
+        0 0 12px #ff5da4;
+      transform: translate(-50%, -50%) scale(.4);
+      opacity: 0;
+    }
+
+    .combo-float.show {
+      animation: comboFloat .8s ease-out;
+    }
+
+    .pause-cover {
+      position: absolute;
+      inset: 0;
+      z-index: 60;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(49,51,87,.6);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    .pause-cover.visible {
+      display: flex;
+    }
+
+    .pause-card {
+      width: min(86vw, 340px);
+      padding: 25px;
+      text-align: center;
+      border-radius: 27px;
+      background: #fff;
+      box-shadow: 0 8px 0 rgba(35,36,67,.22);
+    }
+
+    .pause-card h2 {
+      margin: 0 0 14px;
+      color: #ef4f91;
+    }
+
+    .pause-card .primary-button {
+      width: 100%;
+    }
+
+    .result-screen {
+      align-items: center;
+      justify-content: center;
+    }
+
+    .result-card h2 {
+      margin: 0;
+      color: #ef4f91;
+      font-size: clamp(2rem, 10vw, 3.2rem);
+    }
+
+    .result-score {
+      margin: 7px 0 14px;
+      color: #5d48a3;
+      font-size: clamp(2rem, 11vw, 3.5rem);
+      font-weight: 1000;
+      line-height: 1;
+    }
+
+    .new-record {
+      display: none;
+      margin: 0 auto 10px;
+      padding: 5px 13px;
+      width: fit-content;
+      color: #a05d00;
+      border-radius: 999px;
+      background: #ffe986;
+      font-weight: 1000;
+      animation: float 0.7s ease-in-out infinite alternate;
+    }
+
+    .new-record.visible {
+      display: block;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .result-item {
+      padding: 9px;
+      border-radius: 16px;
+      background: #f1f5ff;
+    }
+
+    .result-item span {
+      display: block;
+      font-size: .76rem;
+      font-weight: 800;
+      opacity: .75;
+    }
+
+    .result-item strong {
+      font-size: 1.08rem;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(47,48,81,.62);
+    }
+
+    .modal.visible {
+      display: flex;
+    }
+
+    .modal-card {
+      width: min(92vw, 430px);
+      max-height: 82dvh;
+      overflow-y: auto;
+      padding: 20px;
+      border-radius: 25px;
+      background: #fff;
+      box-shadow: 0 8px 0 rgba(35,36,67,.22);
+    }
+
+    .modal-card h2 {
+      margin: 0 0 10px;
+      color: #ef4f91;
+      text-align: center;
+    }
+
+    .modal-card ul {
+      padding-left: 1.35em;
+      font-weight: 700;
+      line-height: 1.65;
+    }
+
+    .modal-card .primary-button {
+      width: 100%;
+    }
+
+    .orientation-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 25px;
+      color: var(--ink);
+      text-align: center;
+      background: linear-gradient(145deg, #9be5ff, #fff0b4);
+    }
+
+    .phone-icon {
+      width: 70px;
+      height: 115px;
+      margin: 0 auto 18px;
+      border: 6px solid var(--ink);
+      border-radius: 15px;
+      background: #fff;
+      box-shadow: 0 7px 0 rgba(49,55,89,.15);
+      animation: rotatePhone 1.5s ease-in-out infinite;
+    }
+
+    .phone-icon::after {
+      display: block;
+      width: 21px;
+      height: 5px;
+      margin: 95px auto 0;
+      content: "";
+      border-radius: 10px;
+      background: var(--ink);
+    }
+
+    @media (orientation: landscape) and (max-height: 600px) {
+      .orientation-overlay {
+        display: flex;
+      }
+    }
+
+    @media (max-width: 350px) {
+      :root {
+        --board-size: min(94vw, 52dvh, 330px);
+      }
+
+      .screen {
+        padding-left: 5px;
+        padding-right: 5px;
+      }
+
+      .hud {
+        width: 98vw;
+        gap: 3px;
+      }
+
+      .hud-box {
+        padding: 4px 2px;
+      }
+
+      .game-character-row {
+        min-height: 55px;
+      }
+
+      .game-character-row .character {
+        transform: scale(.86);
+      }
+
+      .status-bubble {
+        font-size: .7rem;
+      }
+
+      .board {
+        border-radius: 18px;
+        border-width: 3px;
+      }
+    }
+
+    @media (max-height: 700px) and (orientation: portrait) {
+      :root {
+        --board-size: min(92vw, 49dvh, 390px);
+      }
+
+      .game-screen {
+        gap: 3px;
+      }
+
+      .game-character-row {
+        min-height: 50px;
+      }
+
+      .game-character-row .character {
+        transform: scale(.8);
+      }
+
+      .title-card {
+        padding: 12px;
+      }
+
+      .character-area {
+        min-height: 90px;
+      }
+
+      .title-card .character {
+        transform: scale(.82);
+      }
+    }
+
+    @keyframes breathe {
+      from { transform: scaleY(1); }
+      50% { transform: scaleY(.95) translateY(3px); }
+      to { transform: scaleY(1); }
+    }
+
+    @keyframes characterCombo {
+      0%, 100% { transform: rotate(0) scale(1); }
+      30% { transform: rotate(-9deg) scale(1.12); }
+      65% { transform: rotate(9deg) scale(1.08); }
+    }
+
+    @keyframes dangerBounce {
+      from { transform: translateY(0) rotate(-2deg); }
+      to { transform: translateY(-5px) rotate(2deg); }
+    }
+
+    @keyframes timerPulse {
+      to { transform: scale(1.06); }
+    }
+
+    @keyframes hintPulse {
+      0%, 100% {
+        filter: none;
+        transform: scale(1);
+      }
+      50% {
+        filter:
+          brightness(1.25)
+          drop-shadow(0 0 8px #fff)
+          drop-shadow(0 0 10px #ff5ea5);
+        transform: scale(1.12);
+      }
+    }
+
+    @keyframes popOut {
+      0% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      45% {
+        opacity: 1;
+        transform: scale(1.25) rotate(7deg);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(.05) rotate(-15deg);
+      }
+    }
+
+    @keyframes appear {
+      from {
+        opacity: 0;
+        transform: translateY(-30%) scale(.5);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes comboFloat {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(.35);
+      }
+      25% {
+        opacity: 1;
+        transform: translate(-50%, -60%) scale(1.1);
+      }
+      75% {
+        opacity: 1;
+        transform: translate(-50%, -90%) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -125%) scale(.9);
+      }
+    }
+
+    @keyframes specialGlow {
+      to {
+        filter:
+          brightness(1.25)
+          drop-shadow(0 0 8px #fff)
+          drop-shadow(0 0 8px #ff648f);
+        transform: scale(1.07);
+      }
+    }
+
+    @keyframes rainbowSpin {
+      to { filter: hue-rotate(360deg) brightness(1.12); }
+    }
+
+    @keyframes boardFlash {
+      0%, 100% { filter: none; }
+      50% {
+        filter: brightness(1.45);
+        transform: scale(1.015);
+      }
+    }
+
+    @keyframes float {
+      to { transform: translateY(-5px); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes rotatePhone {
+      0%, 30% { transform: rotate(90deg); }
+      70%, 100% { transform: rotate(0deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+      }
+    }
+  
+/* ゲーム一覧へのリンク */
+.hub-back{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;min-height:44px;font-family:inherit;font-weight:900;cursor:pointer;touch-action:manipulation}.hub-back:focus-visible{outline:3px solid #ffdc58;outline-offset:4px}.hub-back{color:#38405f;font-size:15px;border:2px solid #fff;background:linear-gradient(135deg,#fff4ce,#c9f6ff)}.pause-card .hub-back{margin-top:14px}.hub-back:active{transform:translateY(3px)}
+</style>
+</head>
+
+<body>
+  <main class="app">
+    <div class="decorations" aria-hidden="true"></div>
+
+    <!-- タイトル画面 -->
+    <section id="titleScreen" class="screen title-screen active" aria-label="タイトル画面">
+      <div class="title-card">
+        <h1 class="logo">ぷくリンク</h1>
+        <p class="subtitle">つないで、はじけて、ハイスコア！</p>
+
+        <div class="character-area">
+          <div class="character" aria-hidden="true">
+            <div class="sprout"></div>
+            <div class="eye left"></div>
+            <div class="eye right"></div>
+            <div class="mouth"></div>
+            <div class="cheek left"></div>
+            <div class="cheek right"></div>
+          </div>
+          <div class="character-text">
+            <strong>ぷく</strong><br>
+            リンクの島から来た、はじける笑顔が自慢の小さな精霊。
+          </div>
+        </div>
+
+        <h2 class="difficulty-title">難易度を選んでね</h2>
+        <div class="difficulty-buttons" role="radiogroup" aria-label="難易度">
+          <button
+            type="button"
+            class="difficulty-button selected"
+            data-difficulty="easy"
+            role="radio"
+            aria-checked="true"
+            aria-label="かんたん、6かける6、3個以上"
+          >
+            かんたん
+            <span>6×6・3個</span>
+          </button>
+          <button
+            type="button"
+            class="difficulty-button"
+            data-difficulty="normal"
+            role="radio"
+            aria-checked="false"
+            aria-label="ふつう、7かける7、4個以上"
+          >
+            ふつう
+            <span>7×7・4個</span>
+          </button>
+          <button
+            type="button"
+            class="difficulty-button"
+            data-difficulty="hard"
+            role="radio"
+            aria-checked="false"
+            aria-label="むずかしい、8かける8、5個以上"
+          >
+            むずかしい
+            <span>8×8・5個</span>
+          </button>
+        </div>
+
+        <div class="button-row">
+          <button
+            id="howToButton"
+            type="button"
+            class="secondary-button"
+            aria-label="遊び方を表示"
+          >
+            遊び方
+          </button>
+          <button
+            id="titleSoundButton"
+            type="button"
+            class="secondary-button"
+            aria-label="サウンドをオフにする"
+          >
+            🔊 サウンド
+          </button>
+        </div>
+
+        <div class="button-row">
+          <button
+            id="startButton"
+            type="button"
+            class="primary-button"
+            aria-label="ゲームを開始"
+          >
+            ゲームスタート！
+          </button>
+        </div>
+<div class="button-row"><a class="hub-back secondary-button" href="index.html" aria-label="ゲーム一覧にもどる">← もどる</a></div>
+      </div>
+    </section>
+
+    <!-- ゲーム画面 -->
+    <section id="gameScreen" class="screen game-screen" aria-label="ゲーム画面">
+      <div class="hud" aria-live="polite">
+        <div class="hud-box">
+          <span class="hud-label">スコア</span>
+          <strong id="scoreDisplay" class="hud-value">0</strong>
+        </div>
+        <div class="hud-box">
+          <span class="hud-label">ハイスコア</span>
+          <strong id="highScoreDisplay" class="hud-value">0</strong>
+        </div>
+        <div id="timerBox" class="hud-box timer-box">
+          <span class="hud-label">残り時間</span>
+          <strong id="timeDisplay" class="hud-value">120</strong>
+        </div>
+        <div class="game-tools">
+          <button
+            id="pauseButton"
+            type="button"
+            class="icon-button"
+            aria-label="一時停止"
+          >⏸</button>
+          <button
+            id="gameSoundButton"
+            type="button"
+            class="icon-button"
+            aria-label="サウンドをオフにする"
+          >🔊</button>
+        </div>
+      </div>
+
+      <div class="game-character-row">
+        <div id="gameCharacter" class="character" aria-hidden="true">
+          <div class="sprout"></div>
+          <div class="eye left"></div>
+          <div class="eye right"></div>
+          <div class="mouth"></div>
+          <div class="cheek left"></div>
+          <div class="cheek right"></div>
+        </div>
+
+        <div id="statusBubble" class="status-bubble" aria-live="polite">
+          同じ絵柄をつないでね！
+        </div>
+      </div>
+
+      <div class="board-wrap">
+        <div
+          id="board"
+          class="board"
+          role="application"
+          aria-label="パズル盤面"
+        >
+          <svg
+            id="connectionLayer"
+            class="connection-layer"
+            aria-hidden="true"
+          >
+            <polyline id="connectionLine" class="connection-line" points=""></polyline>
+          </svg>
+        </div>
+
+        <div id="comboFloat" class="combo-float" aria-live="polite"></div>
+      </div>
+
+      <div class="hud-box" style="width:min(94vw,490px);">
+        <span class="hud-label">コンボ</span>
+        <strong id="comboDisplay" class="hud-value">0 COMBO</strong>
+      </div>
+
+      <div id="pauseCover" class="pause-cover" aria-hidden="true">
+        <div class="pause-card">
+          <h2>一時停止中</h2>
+          <p>ひと休み、ひと休み。</p>
+          <button
+            id="resumeButton"
+            type="button"
+            class="primary-button"
+            aria-label="ゲームを再開"
+          >
+            再開する
+          </button>
+<a class="hub-back secondary-button" href="index.html" aria-label="ゲーム一覧にもどる">← もどる</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ゲームオーバー画面 -->
+    <section id="resultScreen" class="screen result-screen" aria-label="ゲーム終了画面">
+      <div class="result-card">
+        <h2>タイムアップ！</h2>
+
+        <div class="character-area">
+          <div class="character over" aria-hidden="true">
+            <div class="sprout"></div>
+            <div class="eye left"></div>
+            <div class="eye right"></div>
+            <div class="mouth"></div>
+            <div class="cheek left"></div>
+            <div class="cheek right"></div>
+          </div>
+          <div class="character-text">
+            <strong>ぷく</strong><br>
+            おつかれさま！ また一緒にリンクしよう！
+          </div>
+        </div>
+
+        <div id="newRecord" class="new-record">★ NEW RECORD ★</div>
+        <p style="margin:0;font-weight:850;">最終スコア</p>
+        <div id="finalScore" class="result-score">0</div>
+
+        <div class="result-grid">
+          <div class="result-item">
+            <span>ハイスコア</span>
+            <strong id="resultHighScore">0</strong>
+          </div>
+          <div class="result-item">
+            <span>消したピース</span>
+            <strong id="totalRemoved">0</strong>
+          </div>
+          <div class="result-item">
+            <span>最大コンボ</span>
+            <strong id="bestCombo">0</strong>
+          </div>
+          <div class="result-item">
+            <span>難易度</span>
+            <strong id="resultDifficulty">かんたん</strong>
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button
+            id="retryButton"
+            type="button"
+            class="primary-button"
+            aria-label="同じ難易度でもう一度遊ぶ"
+          >
+            もう一度遊ぶ
+          </button>
+        </div>
+
+        <div class="button-row">
+          <button
+            id="backTitleButton"
+            type="button"
+            class="secondary-button"
+            aria-label="タイトル画面へ戻る"
+          >
+            タイトルへ戻る
+          </button>
+        </div>
+<div class="button-row"><a class="hub-back secondary-button" href="index.html" aria-label="ゲーム一覧にもどる">← もどる</a></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 遊び方 -->
+  <div id="howToModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="howToTitle">
+    <div class="modal-card">
+      <h2 id="howToTitle">遊び方</h2>
+      <ul>
+        <li>同じ絵柄を上下・左右・斜めになぞってつなぎます。</li>
+        <li>必要な数以上つないで指を離すと、ピースが消えます。</li>
+        <li>一度に多く消すほどスコア倍率がアップします。</li>
+        <li>素早く続けて消すとコンボになります。</li>
+        <li>6個以上で周囲を消す「ボム」が出現します。</li>
+        <li>9個以上で同じ種類を全消しする「レインボー」が出現します。</li>
+        <li>レインボーをタップした後、消したい通常ピースをタップしてください。</li>
+        <li>操作がないと、消せる組み合わせが点滅します。</li>
+      </ul>
+      <button
+        id="closeHowToButton"
+        type="button"
+        class="primary-button"
+        aria-label="遊び方を閉じる"
+      >
+        わかった！
+      </button>
+    </div>
+  </div>
+
+  <!-- 横画面案内 -->
+  <div class="orientation-overlay" role="alert">
+    <div>
+      <div class="phone-icon" aria-hidden="true"></div>
+      <h2>端末を縦向きにしてね</h2>
+      <p>「ぷくリンク」は縦画面で遊ぶゲームです。</p>
+    </div>
+  </div>
+
+  <script>
+    "use strict";
+
+    (() => {
+      /* =========================================================
+         基本設定
+      ========================================================= */
+      const GAME_TIME = 120;
+      const COMBO_WINDOW = 2500;
+
+      const DIFFICULTIES = {
+        easy: {
+          label: "かんたん",
+          size: 6,
+          types: 5,
+          minimum: 3,
+          hintDelay: 3500
+        },
+        normal: {
+          label: "ふつう",
+          size: 7,
+          types: 6,
+          minimum: 4,
+          hintDelay: 5500
+        },
+        hard: {
+          label: "むずかしい",
+          size: 8,
+          types: 7,
+          minimum: 5,
+          hintDelay: 7500
+        }
+      };
+
+      const PIECE_SYMBOLS = ["♥", "●", "★", "◆", "✿", "☀", "⬢"];
+
+      const SPECIAL_NORMAL = "normal";
+      const SPECIAL_BOMB = "bomb";
+      const SPECIAL_RAINBOW = "rainbow";
+
+      const titleScreen = document.getElementById("titleScreen");
+      const gameScreen = document.getElementById("gameScreen");
+      const resultScreen = document.getElementById("resultScreen");
+      const boardElement = document.getElementById("board");
+      const connectionLine = document.getElementById("connectionLine");
+      const scoreDisplay = document.getElementById("scoreDisplay");
+      const highScoreDisplay = document.getElementById("highScoreDisplay");
+      const timeDisplay = document.getElementById("timeDisplay");
+      const timerBox = document.getElementById("timerBox");
+      const comboDisplay = document.getElementById("comboDisplay");
+      const comboFloat = document.getElementById("comboFloat");
+      const gameCharacter = document.getElementById("gameCharacter");
+      const statusBubble = document.getElementById("statusBubble");
+      const pauseCover = document.getElementById("pauseCover");
+      const howToModal = document.getElementById("howToModal");
+
+      let selectedDifficulty = "easy";
+      let currentConfig = DIFFICULTIES.easy;
+      let board = [];
+
+      let score = 0;
+      let removedTotal = 0;
+      let combo = 0;
+      let bestCombo = 0;
+      let lastClearTime = 0;
+
+      let remainingTime = GAME_TIME;
+      let timerId = null;
+      let lastTimerTimestamp = 0;
+      let warningBeepSecond = null;
+
+      let gameActive = false;
+      let paused = false;
+      let processing = false;
+      let pointerActive = false;
+      let activePointerId = null;
+      let selectedPath = [];
+      let rainbowArmed = null;
+
+      let hintTimeoutId = null;
+      let statusTimeoutId = null;
+      let characterTimeoutId = null;
+
+      let soundEnabled = true;
+      let audioContext = null;
+
+      /* =========================================================
+         localStorage
+      ========================================================= */
+      function getHighScoreKey() {
+        return "pukuLinkHighScore_" + selectedDifficulty;
+      }
+
+      function getHighScore() {
+        try {
+          return Number(localStorage.getItem(getHighScoreKey())) || 0;
+        } catch (error) {
+          return 0;
+        }
+      }
+
+      function saveHighScore(value) {
+        try {
+          localStorage.setItem(getHighScoreKey(), String(value));
+        } catch (error) {
+          /* ストレージが使用できない場合もゲームは継続する */
+        }
+      }
+
+      /* =========================================================
+         Web Audio APIによる効果音
+      ========================================================= */
+      function ensureAudio() {
+        if (!audioContext) {
+          const AudioContextClass =
+            window.AudioContext || window.webkitAudioContext;
+
+          if (AudioContextClass) {
+            audioContext = new AudioContextClass();
+          }
+        }
+
+        if (audioContext && audioContext.state === "suspended") {
+          audioContext.resume().catch(() => {});
+        }
+      }
+
+      function playTone(frequency, duration, type = "sine", volume = 0.035, delay = 0) {
+        if (!soundEnabled) return;
+
+        ensureAudio();
+        if (!audioContext) return;
+
+        const start = audioContext.currentTime + delay;
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, start);
+
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(volume, start + 0.012);
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          start + Math.max(0.04, duration)
+        );
+
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(start);
+        oscillator.stop(start + duration + 0.03);
+      }
+
+      function playSound(name) {
+        if (!soundEnabled) return;
+
+        switch (name) {
+          case "start":
+            playTone(440, .1, "sine", .03);
+            playTone(590, .12, "sine", .03, .1);
+            playTone(760, .18, "sine", .035, .2);
+            break;
+          case "select":
+            playTone(420 + selectedPath.length * 28, .055, "sine", .018);
+            break;
+          case "remove":
+            playTone(620, .09, "triangle", .03);
+            playTone(850, .13, "triangle", .025, .07);
+            break;
+          case "combo":
+            playTone(690, .08, "square", .018);
+            playTone(920, .12, "square", .018, .07);
+            break;
+          case "special":
+            playTone(350, .1, "sawtooth", .025);
+            playTone(700, .16, "triangle", .03, .08);
+            playTone(1050, .22, "sine", .03, .16);
+            break;
+          case "warning":
+            playTone(330, .09, "square", .018);
+            break;
+          case "end":
+            playTone(540, .14, "triangle", .03);
+            playTone(410, .18, "triangle", .03, .14);
+            playTone(280, .28, "sine", .035, .31);
+            break;
+        }
+      }
+
+      function vibrate(pattern) {
+        if ("vibrate" in navigator) {
+          try {
+            navigator.vibrate(pattern);
+          } catch (error) {
+            /* 未対応環境では無視 */
+          }
+        }
+      }
+
+      function toggleSound() {
+        soundEnabled = !soundEnabled;
+        ensureAudio();
+        updateSoundButtons();
+
+        if (soundEnabled) {
+          playTone(650, .1, "sine", .025);
+        }
+      }
+
+      function updateSoundButtons() {
+        const titleButton = document.getElementById("titleSoundButton");
+        const gameButton = document.getElementById("gameSoundButton");
+
+        titleButton.textContent = soundEnabled ? "🔊 サウンド" : "🔇 サウンド";
+        gameButton.textContent = soundEnabled ? "🔊" : "🔇";
+
+        const label = soundEnabled
+          ? "サウンドをオフにする"
+          : "サウンドをオンにする";
+
+        titleButton.setAttribute("aria-label", label);
+        gameButton.setAttribute("aria-label", label);
+      }
+
+      /* =========================================================
+         画面・表示更新
+      ========================================================= */
+      function showScreen(screen) {
+        [titleScreen, gameScreen, resultScreen].forEach(element => {
+          element.classList.toggle("active", element === screen);
+        });
+      }
+
+      function formatNumber(value) {
+        return Math.floor(value).toLocaleString("ja-JP");
+      }
+
+      function updateHud() {
+        scoreDisplay.textContent = formatNumber(score);
+        highScoreDisplay.textContent =
+          formatNumber(Math.max(getHighScore(), score));
+        timeDisplay.textContent = String(Math.max(0, Math.ceil(remainingTime)));
+        comboDisplay.textContent = combo + " COMBO";
+
+        timerBox.classList.toggle(
+          "warning",
+          remainingTime <= 30 && remainingTime > 10
+        );
+        timerBox.classList.toggle("danger", remainingTime <= 10);
+
+        gameCharacter.classList.toggle(
+          "danger",
+          remainingTime <= 10 && gameActive
+        );
+      }
+
+      function setStatus(message, duration = 1800) {
+        clearTimeout(statusTimeoutId);
+        statusBubble.textContent = message;
+
+        if (duration > 0) {
+          statusTimeoutId = setTimeout(() => {
+            if (gameActive && !paused) {
+              statusBubble.textContent =
+                rainbowArmed !== null
+                  ? "消したい絵柄をタップ！"
+                  : "同じ絵柄をつないでね！";
+            }
+          }, duration);
+        }
+      }
+
+      function reactCharacter(type) {
+        clearTimeout(characterTimeoutId);
+        gameCharacter.classList.remove("combo");
+
+        if (type === "combo") {
+          void gameCharacter.offsetWidth;
+          gameCharacter.classList.add("combo");
+
+          characterTimeoutId = setTimeout(() => {
+            gameCharacter.classList.remove("combo");
+          }, 1300);
+        }
+      }
+
+      function showComboAnimation(points) {
+        comboFloat.classList.remove("show");
+        void comboFloat.offsetWidth;
+
+        comboFloat.innerHTML =
+          combo > 1
+            ? combo + " COMBO<br><small>+" + formatNumber(points) + "</small>"
+            : "NICE!<br><small>+" + formatNumber(points) + "</small>";
+
+        comboFloat.classList.add("show");
+      }
+
+      /* =========================================================
+         盤面データ生成
+      ========================================================= */
+      function createNormalPiece(type = randomType()) {
+        return {
+          type,
+          special: SPECIAL_NORMAL,
+          id: createId()
+        };
+      }
+
+      function createId() {
+        return (
+          Date.now().toString(36) +
+          Math.random().toString(36).slice(2, 9)
+        );
+      }
+
+      function randomType() {
+        return Math.floor(Math.random() * currentConfig.types);
+      }
+
+      function buildInitialBoard() {
+        let attempts = 0;
+
+        do {
+          board = Array.from(
+            { length: currentConfig.size },
+            () => Array.from(
+              { length: currentConfig.size },
+              () => createNormalPiece()
+            )
+          );
+          attempts++;
+        } while (!findValidPath() && attempts < 100);
+
+        if (!findValidPath()) {
+          forcePlayablePattern();
+        }
+      }
+
+      function forcePlayablePattern() {
+        const minimum = currentConfig.minimum;
+        const type = randomType();
+        let count = 0;
+
+        for (let row = 0; row < currentConfig.size && count < minimum; row++) {
+          for (let column = 0; column < currentConfig.size && count < minimum; column++) {
+            board[row][column] = createNormalPiece(type);
+            count++;
+          }
+        }
+      }
+
+      /* =========================================================
+         盤面描画
+      ========================================================= */
+      function renderBoard(animateNew = false) {
+        const oldSvg = document.getElementById("connectionLayer");
+        boardElement.innerHTML = "";
+        boardElement.style.setProperty("--size", currentConfig.size);
+        boardElement.style.gridTemplateColumns =
+          `repeat(${currentConfig.size}, 1fr)`;
+        boardElement.style.gridTemplateRows =
+          `repeat(${currentConfig.size}, 1fr)`;
+
+        if (oldSvg) {
+          oldSvg.remove();
+        }
+
+        const svgNamespace = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNamespace, "svg");
+        svg.id = "connectionLayer";
+        svg.classList.add("connection-layer");
+        svg.setAttribute("aria-hidden", "true");
+
+        const polyline = document.createElementNS(svgNamespace, "polyline");
+        polyline.id = "connectionLine";
+        polyline.classList.add("connection-line");
+        polyline.setAttribute("points", "");
+
+        svg.appendChild(polyline);
+        boardElement.appendChild(svg);
+
+        for (let row = 0; row < currentConfig.size; row++) {
+          for (let column = 0; column < currentConfig.size; column++) {
+            const piece = board[row][column];
+            if (!piece) continue;
+
+            const element = document.createElement("div");
+            element.className = "piece";
+            element.dataset.row = String(row);
+            element.dataset.column = String(column);
+            element.dataset.type = String(piece.type);
+            element.dataset.id = piece.id;
+            element.setAttribute("role", "button");
+            element.setAttribute("tabindex", "-1");
+
+            if (animateNew) {
+              element.classList.add("appear");
+            }
+
+            if (piece.special === SPECIAL_BOMB) {
+              element.classList.add("bomb");
+              element.innerHTML = '<span class="piece-symbol">✦</span>';
+              element.setAttribute("aria-label", "ボムピース");
+            } else if (piece.special === SPECIAL_RAINBOW) {
+              element.classList.add("rainbow");
+              element.innerHTML = '<span class="piece-symbol">✧</span>';
+              element.setAttribute("aria-label", "レインボーピース");
+            } else {
+              element.innerHTML =
+                `<span class="piece-symbol">${PIECE_SYMBOLS[piece.type]}</span>`;
+              element.setAttribute(
+                "aria-label",
+                `絵柄${piece.type + 1}`
+              );
+            }
+
+            boardElement.appendChild(element);
+          }
+        }
+
+        updateRainbowArmedVisual();
+      }
+
+      function getPieceElement(row, column) {
+        return boardElement.querySelector(
+          `.piece[data-row="${row}"][data-column="${column}"]`
+        );
+      }
+
+      function getCoordinateFromElement(element) {
+        if (!element || !element.classList.contains("piece")) return null;
+
+        return {
+          row: Number(element.dataset.row),
+          column: Number(element.dataset.column)
+        };
+      }
+
+      function getPieceFromCoordinate(coordinate) {
+        if (!coordinate) return null;
+        return board[coordinate.row]?.[coordinate.column] || null;
+      }
+
+      /* =========================================================
+         Pointer Eventsによるなぞり操作
+      ========================================================= */
+      function handlePointerDown(event) {
+        if (!gameActive || paused || processing) return;
+
+        const pieceElement = event.target.closest(".piece");
+        if (!pieceElement || !boardElement.contains(pieceElement)) return;
+
+        event.preventDefault();
+        ensureAudio();
+        resetHintTimer();
+
+        const coordinate = getCoordinateFromElement(pieceElement);
+        const piece = getPieceFromCoordinate(coordinate);
+        if (!piece) return;
+
+        /* レインボーが選択済みなら通常ピースを対象にして発動 */
+        if (rainbowArmed !== null) {
+          if (piece.special === SPECIAL_NORMAL) {
+            activateRainbow(rainbowArmed, piece.type);
+          } else {
+            setStatus("通常の絵柄を選んでね！");
+          }
+          return;
+        }
+
+        /* スペシャルピースは単体タップとして扱う */
+        if (
+          piece.special === SPECIAL_BOMB ||
+          piece.special === SPECIAL_RAINBOW
+        ) {
+          activePointerId = event.pointerId;
+          pointerActive = true;
+          selectedPath = [coordinate];
+          highlightSelection();
+          trySetPointerCapture(event.pointerId);
+          playSound("select");
+          return;
+        }
+
+        activePointerId = event.pointerId;
+        pointerActive = true;
+        selectedPath = [coordinate];
+
+        trySetPointerCapture(event.pointerId);
+        highlightSelection();
+        playSound("select");
+      }
+
+      function handlePointerMove(event) {
+        if (
+          !pointerActive ||
+          event.pointerId !== activePointerId ||
+          !gameActive ||
+          paused ||
+          processing
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+
+        const element = document.elementFromPoint(event.clientX, event.clientY);
+        const pieceElement = element?.closest?.(".piece");
+
+        if (!pieceElement || !boardElement.contains(pieceElement)) return;
+
+        const coordinate = getCoordinateFromElement(pieceElement);
+        const piece = getPieceFromCoordinate(coordinate);
+        if (!piece || selectedPath.length === 0) return;
+
+        const firstPiece = getPieceFromCoordinate(selectedPath[0]);
+        const lastCoordinate = selectedPath[selectedPath.length - 1];
+
+        if (!firstPiece || firstPiece.special !== SPECIAL_NORMAL) return;
+        if (piece.special !== SPECIAL_NORMAL) return;
+        if (piece.type !== firstPiece.type) return;
+
+        /* 直前のピースへ戻った場合のみ1手戻せる */
+        if (
+          selectedPath.length >= 2 &&
+          sameCoordinate(
+            coordinate,
+            selectedPath[selectedPath.length - 2]
+          )
+        ) {
+          selectedPath.pop();
+          highlightSelection();
+          playSound("select");
+          return;
+        }
+
+        if (!isAdjacent(lastCoordinate, coordinate)) return;
+        if (pathContains(coordinate)) return;
+
+        selectedPath.push(coordinate);
+        highlightSelection();
+        playSound("select");
+      }
+
+      function handlePointerUp(event) {
+        if (
+          !pointerActive ||
+          event.pointerId !== activePointerId
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        finishPointerOperation();
+      }
+
+      function handlePointerCancel(event) {
+        if (event.pointerId !== activePointerId) return;
+        cancelSelection();
+      }
+
+      function trySetPointerCapture(pointerId) {
+        try {
+          boardElement.setPointerCapture(pointerId);
+        } catch (error) {
+          /* 一部ブラウザで失敗しても操作は継続可能 */
+        }
+      }
+
+      function finishPointerOperation() {
+        pointerActive = false;
+        activePointerId = null;
+
+        if (selectedPath.length === 1) {
+          const coordinate = selectedPath[0];
+          const piece = getPieceFromCoordinate(coordinate);
+
+          if (piece?.special === SPECIAL_BOMB) {
+            clearSelectionVisual();
+            selectedPath = [];
+            activateBomb(coordinate);
+            return;
+          }
+
+          if (piece?.special === SPECIAL_RAINBOW) {
+            rainbowArmed = coordinate;
+            clearSelectionVisual();
+            selectedPath = [];
+            updateRainbowArmedVisual();
+            setStatus("消したい絵柄をタップ！");
+            playSound("special");
+            return;
+          }
+        }
+
+        if (selectedPath.length >= currentConfig.minimum) {
+          const path = [...selectedPath];
+          clearSelectionVisual();
+          selectedPath = [];
+          resolveNormalClear(path);
+        } else {
+          setStatus(
+            `${currentConfig.minimum}個以上つないでね！`
+          );
+          cancelSelection();
+        }
+      }
+
+      function cancelSelection() {
+        pointerActive = false;
+        activePointerId = null;
+        selectedPath = [];
+        clearSelectionVisual();
+        resetHintTimer();
+      }
+
+      function isAdjacent(a, b) {
+        const rowDifference = Math.abs(a.row - b.row);
+        const columnDifference = Math.abs(a.column - b.column);
+
+        return (
+          rowDifference <= 1 &&
+          columnDifference <= 1 &&
+          !(rowDifference === 0 && columnDifference === 0)
+        );
+      }
+
+      function sameCoordinate(a, b) {
+        return a.row === b.row && a.column === b.column;
+      }
+
+      function pathContains(coordinate) {
+        return selectedPath.some(item => sameCoordinate(item, coordinate));
+      }
+
+      function highlightSelection() {
+        boardElement.querySelectorAll(".piece.selected").forEach(element => {
+          element.classList.remove("selected");
+        });
+
+        selectedPath.forEach(coordinate => {
+          getPieceElement(coordinate.row, coordinate.column)
+            ?.classList.add("selected");
+        });
+
+        updateConnectionLine();
+
+        if (selectedPath.length >= currentConfig.minimum) {
+          setStatus(`${selectedPath.length}個！ 指を離して消そう`);
+        } else {
+          setStatus(
+            `あと${currentConfig.minimum - selectedPath.length}個`,
+            0
+          );
+        }
+      }
+
+      function clearSelectionVisual() {
+        boardElement.querySelectorAll(".piece.selected").forEach(element => {
+          element.classList.remove("selected");
+        });
+
+        const line = document.getElementById("connectionLine");
+        if (line) line.setAttribute("points", "");
+      }
+
+      function updateConnectionLine() {
+        const line = document.getElementById("connectionLine");
+        if (!line) return;
+
+        const boardRect = boardElement.getBoundingClientRect();
+
+        const points = selectedPath.map(coordinate => {
+          const element = getPieceElement(
+            coordinate.row,
+            coordinate.column
+          );
+
+          if (!element) return "";
+
+          const rect = element.getBoundingClientRect();
+          const x = rect.left - boardRect.left + rect.width / 2;
+          const y = rect.top - boardRect.top + rect.height / 2;
+          return `${x},${y}`;
+        }).filter(Boolean);
+
+        line.setAttribute("points", points.join(" "));
+      }
+
+      /* =========================================================
+         通常ピースの削除・スコア計算
+      ========================================================= */
+      async function resolveNormalClear(path) {
+        if (processing || !gameActive) return;
+        processing = true;
+        boardElement.classList.add("locked");
+
+        const clearedCount = path.length;
+        const anchor = path[path.length - 1];
+
+        let specialToCreate = SPECIAL_NORMAL;
+        if (clearedCount >= 9) {
+          specialToCreate = SPECIAL_RAINBOW;
+        } else if (clearedCount >= 6) {
+          specialToCreate = SPECIAL_BOMB;
+        }
+
+        await animateRemoval(path);
+        removeCoordinates(path);
+
+        const points = calculateScore(clearedCount, false);
+        applyScore(points, clearedCount);
+
+        collapseAndRefill();
+
+        /* 大量削除時は最後に選んだ位置へスペシャルを配置 */
+        if (specialToCreate !== SPECIAL_NORMAL) {
+          const targetRow = Math.min(
+            currentConfig.size - 1,
+            Math.max(0, anchor.row)
+          );
+          const targetColumn = Math.min(
+            currentConfig.size - 1,
+            Math.max(0, anchor.column)
+          );
+
+          board[targetRow][targetColumn] = {
+            type: path.length ? getPathType(path) : randomType(),
+            special: specialToCreate,
+            id: createId()
+          };
+
+          setStatus(
+            specialToCreate === SPECIAL_RAINBOW
+              ? "レインボー誕生！"
+              : "ボム誕生！"
+          );
+          playSound("special");
+          vibrate([25, 25, 35]);
+          flashBoard();
+        } else {
+          playSound(combo > 1 ? "combo" : "remove");
+        }
+
+        renderBoard(true);
+        await wait(230);
+
+        processing = false;
+        boardElement.classList.remove("locked");
+        ensurePlayableBoard();
+        resetHintTimer();
+      }
+
+      function getPathType(path) {
+        for (const coordinate of path) {
+          const piece = board[coordinate.row]?.[coordinate.column];
+          if (piece && piece.special === SPECIAL_NORMAL) {
+            return piece.type;
+          }
+        }
+        return randomType();
+      }
+
+      function calculateScore(count, specialActivation) {
+        let amountMultiplier = 1;
+
+        if (count >= 15) amountMultiplier = 3.2;
+        else if (count >= 12) amountMultiplier = 2.6;
+        else if (count >= 9) amountMultiplier = 2.1;
+        else if (count >= 6) amountMultiplier = 1.6;
+        else if (count >= 5) amountMultiplier = 1.3;
+
+        const now = performance.now();
+
+        if (
+          lastClearTime > 0 &&
+          now - lastClearTime <= COMBO_WINDOW
+        ) {
+          combo++;
+        } else {
+          combo = 1;
+        }
+
+        lastClearTime = now;
+        bestCombo = Math.max(bestCombo, combo);
+
+        const comboMultiplier = 1 + Math.max(0, combo - 1) * 0.22;
+        const specialMultiplier = specialActivation ? 1.25 : 1;
+
+        return Math.round(
+          count * 100 *
+          amountMultiplier *
+          comboMultiplier *
+          specialMultiplier
+        );
+      }
+
+      function applyScore(points, count) {
+        score += points;
+        removedTotal += count;
+        bestCombo = Math.max(bestCombo, combo);
+
+        updateHud();
+        showComboAnimation(points);
+        reactCharacter("combo");
+
+        if (combo > 1) {
+          setStatus(`${combo}コンボ！ すごい！`);
+          playSound("combo");
+        }
+      }
+
+      /* =========================================================
+         スペシャルピース
+      ========================================================= */
+      async function activateBomb(center) {
+        if (processing || !gameActive) return;
+
+        processing = true;
+        boardElement.classList.add("locked");
+
+        const targets = [];
+
+        for (let rowOffset = -1; rowOffset <= 1; rowOffset++) {
+          for (let columnOffset = -1; columnOffset <= 1; columnOffset++) {
+            const row = center.row + rowOffset;
+            const column = center.column + columnOffset;
+
+            if (
+              row >= 0 &&
+              row < currentConfig.size &&
+              column >= 0 &&
+              column < currentConfig.size &&
+              board[row][column]
+            ) {
+              targets.push({ row, column });
+            }
+          }
+        }
+
+        playSound("special");
+        vibrate([35, 25, 45]);
+        flashBoard();
+        setStatus("ボム、ばくはつ！");
+
+        await animateRemoval(targets);
+        removeCoordinates(targets);
+
+        const points = calculateScore(targets.length, true);
+        applyScore(points, targets.length);
+
+        collapseAndRefill();
+        renderBoard(true);
+        await wait(250);
+
+        processing = false;
+        boardElement.classList.remove("locked");
+        ensurePlayableBoard();
+        resetHintTimer();
+      }
+
+      async function activateRainbow(rainbowCoordinate, targetType) {
+        if (processing || !gameActive) return;
+
+        processing = true;
+        boardElement.classList.add("locked");
+        rainbowArmed = null;
+        updateRainbowArmedVisual();
+
+        const targets = [rainbowCoordinate];
+
+        for (let row = 0; row < currentConfig.size; row++) {
+          for (let column = 0; column < currentConfig.size; column++) {
+            const piece = board[row][column];
+
+            if (
+              piece &&
+              piece.special === SPECIAL_NORMAL &&
+              piece.type === targetType
+            ) {
+              targets.push({ row, column });
+            }
+          }
+        }
+
+        const uniqueTargets = uniqueCoordinates(targets);
+
+        playSound("special");
+        vibrate([25, 20, 25, 20, 55]);
+        flashBoard();
+        setStatus("レインボーリンク！");
+
+        await animateRemoval(uniqueTargets);
+        removeCoordinates(uniqueTargets);
+
+        const points = calculateScore(uniqueTargets.length, true);
+        applyScore(points, uniqueTargets.length);
+
+        collapseAndRefill();
+        renderBoard(true);
+        await wait(280);
+
+        processing = false;
+        boardElement.classList.remove("locked");
+        ensurePlayableBoard();
+        resetHintTimer();
+      }
+
+      function updateRainbowArmedVisual() {
+        boardElement.querySelectorAll(".rainbow-armed").forEach(element => {
+          element.classList.remove("rainbow-armed");
+        });
+
+        if (rainbowArmed !== null) {
+          getPieceElement(rainbowArmed.row, rainbowArmed.column)
+            ?.classList.add("rainbow-armed");
+        }
+      }
+
+      function flashBoard() {
+        boardElement.classList.remove("special-flash");
+        void boardElement.offsetWidth;
+        boardElement.classList.add("special-flash");
+
+        setTimeout(() => {
+          boardElement.classList.remove("special-flash");
+        }, 450);
+      }
+
+      /* =========================================================
+         削除・落下・補充
+      ========================================================= */
+      function animateRemoval(coordinates) {
+        uniqueCoordinates(coordinates).forEach(coordinate => {
+          getPieceElement(coordinate.row, coordinate.column)
+            ?.classList.add("removing");
+        });
+
+        return wait(290);
+      }
+
+      function removeCoordinates(coordinates) {
+        uniqueCoordinates(coordinates).forEach(coordinate => {
+          if (board[coordinate.row]?.[coordinate.column]) {
+            board[coordinate.row][coordinate.column] = null;
+          }
+        });
+      }
+
+      function uniqueCoordinates(coordinates) {
+        const map = new Map();
+
+        coordinates.forEach(coordinate => {
+          map.set(
+            `${coordinate.row}:${coordinate.column}`,
+            coordinate
+          );
+        });
+
+        return [...map.values()];
+      }
+
+      function collapseAndRefill() {
+        const size = currentConfig.size;
+
+        for (let column = 0; column < size; column++) {
+          const remainingPieces = [];
+
+          for (let row = size - 1; row >= 0; row--) {
+            if (board[row][column]) {
+              remainingPieces.push(board[row][column]);
+            }
+          }
+
+          let row = size - 1;
+
+          remainingPieces.forEach(piece => {
+            board[row][column] = piece;
+            row--;
+          });
+
+          while (row >= 0) {
+            board[row][column] = createNormalPiece();
+            row--;
+          }
+        }
+      }
+
+      /* =========================================================
+         ヒント検索・シャッフル
+      ========================================================= */
+      function findValidPath() {
+        const size = currentConfig.size;
+        const minimum = currentConfig.minimum;
+
+        for (let row = 0; row < size; row++) {
+          for (let column = 0; column < size; column++) {
+            const piece = board[row]?.[column];
+
+            if (!piece || piece.special !== SPECIAL_NORMAL) continue;
+
+            const path = [];
+            const visited = new Set();
+
+            if (
+              searchPath(
+                row,
+                column,
+                piece.type,
+                minimum,
+                path,
+                visited
+              )
+            ) {
+              return path;
+            }
+          }
+        }
+
+        return null;
+      }
+
+      function searchPath(
+        row,
+        column,
+        type,
+        targetLength,
+        path,
+        visited
+      ) {
+        const key = `${row}:${column}`;
+        const piece = board[row]?.[column];
+
+        if (
+          visited.has(key) ||
+          !piece ||
+          piece.special !== SPECIAL_NORMAL ||
+          piece.type !== type
+        ) {
+          return false;
+        }
+
+        visited.add(key);
+        path.push({ row, column });
+
+        if (path.length >= targetLength) {
+          return true;
+        }
+
+        const neighbours = getNeighbours(row, column);
+
+        for (const neighbour of neighbours) {
+          if (
+            searchPath(
+              neighbour.row,
+              neighbour.column,
+              type,
+              targetLength,
+              path,
+              visited
+            )
+          ) {
+            return true;
+          }
+        }
+
+        path.pop();
+        visited.delete(key);
+        return false;
+      }
+
+      function getNeighbours(row, column) {
+        const neighbours = [];
+
+        for (let rowOffset = -1; rowOffset <= 1; rowOffset++) {
+          for (let columnOffset = -1; columnOffset <= 1; columnOffset++) {
+            if (rowOffset === 0 && columnOffset === 0) continue;
+
+            const nextRow = row + rowOffset;
+            const nextColumn = column + columnOffset;
+
+            if (
+              nextRow >= 0 &&
+              nextRow < currentConfig.size &&
+              nextColumn >= 0 &&
+              nextColumn < currentConfig.size
+            ) {
+              neighbours.push({
+                row: nextRow,
+                column: nextColumn
+              });
+            }
+          }
+        }
+
+        return neighbours;
+      }
+
+      function resetHintTimer() {
+        clearTimeout(hintTimeoutId);
+
+        boardElement.querySelectorAll(".hint").forEach(element => {
+          element.classList.remove("hint");
+        });
+
+        if (!gameActive || paused || processing) return;
+
+        hintTimeoutId = setTimeout(() => {
+          showHint();
+        }, currentConfig.hintDelay);
+      }
+
+      function showHint() {
+        if (!gameActive || paused || processing || pointerActive) return;
+
+        const path = findValidPath();
+
+        if (!path) {
+          shuffleBoard();
+          return;
+        }
+
+        path.forEach(coordinate => {
+          getPieceElement(coordinate.row, coordinate.column)
+            ?.classList.add("hint");
+        });
+
+        setStatus("このあたりをつないでみよう！", 2100);
+
+        setTimeout(() => {
+          boardElement.querySelectorAll(".hint").forEach(element => {
+            element.classList.remove("hint");
+          });
+
+          resetHintTimer();
+        }, 2200);
+      }
+
+      function ensurePlayableBoard() {
+        if (findValidPath()) return;
+        shuffleBoard();
+      }
+
+      function shuffleBoard() {
+        if (!gameActive) return;
+
+        let attempts = 0;
+        let playable = false;
+
+        while (!playable && attempts < 100) {
+          for (let row = 0; row < currentConfig.size; row++) {
+            for (let column = 0; column < currentConfig.size; column++) {
+              const piece = board[row][column];
+
+              if (piece?.special === SPECIAL_NORMAL) {
+                piece.type = randomType();
+              }
+            }
+          }
+
+          playable = Boolean(findValidPath());
+          attempts++;
+        }
+
+        if (!playable) {
+          forcePlayablePattern();
+        }
+
+        rainbowArmed = null;
+        renderBoard(true);
+        flashBoard();
+        setStatus("つなげる場所がないのでシャッフル！");
+        vibrate(20);
+        resetHintTimer();
+      }
+
+      /* =========================================================
+         タイマー・一時停止
+      ========================================================= */
+      function startTimer() {
+        stopTimer();
+        lastTimerTimestamp = performance.now();
+
+        timerId = window.setInterval(() => {
+          if (!gameActive || paused) return;
+
+          const now = performance.now();
+          const elapsed = (now - lastTimerTimestamp) / 1000;
+          lastTimerTimestamp = now;
+
+          remainingTime = Math.max(0, remainingTime - elapsed);
+          const displaySecond = Math.ceil(remainingTime);
+
+          if (
+            remainingTime <= 10 &&
+            remainingTime > 0 &&
+            warningBeepSecond !== displaySecond
+          ) {
+            warningBeepSecond = displaySecond;
+            playSound("warning");
+          }
+
+          updateHud();
+
+          if (remainingTime <= 0) {
+            endGame();
+          }
+        }, 100);
+      }
+
+      function stopTimer() {
+        if (timerId !== null) {
+          clearInterval(timerId);
+          timerId = null;
+        }
+      }
+
+      function pauseGame(automatic = false) {
+        if (!gameActive || paused) return;
+
+        paused = true;
+        cancelSelection();
+        clearTimeout(hintTimeoutId);
+        pauseCover.classList.add("visible");
+        pauseCover.setAttribute("aria-hidden", "false");
+        boardElement.classList.add("locked");
+
+        if (automatic) {
+          setStatus("画面を離れたので一時停止しました", 0);
+        }
+      }
+
+      function resumeGame() {
+        if (!gameActive || !paused) return;
+
+        paused = false;
+        lastTimerTimestamp = performance.now();
+        pauseCover.classList.remove("visible");
+        pauseCover.setAttribute("aria-hidden", "true");
+        boardElement.classList.remove("locked");
+        setStatus("ゲーム再開！");
+
+        ensureAudio();
+        resetHintTimer();
+      }
+
+      /* =========================================================
+         ゲーム開始・終了・リトライ
+      ========================================================= */
+      function startGame() {
+        ensureAudio();
+        stopTimer();
+        clearTimeout(hintTimeoutId);
+        clearTimeout(statusTimeoutId);
+        clearTimeout(characterTimeoutId);
+
+        currentConfig = DIFFICULTIES[selectedDifficulty];
+
+        score = 0;
+        removedTotal = 0;
+        combo = 0;
+        bestCombo = 0;
+        lastClearTime = 0;
+
+        remainingTime = GAME_TIME;
+        warningBeepSecond = null;
+
+        gameActive = true;
+        paused = false;
+        processing = false;
+        pointerActive = false;
+        activePointerId = null;
+        selectedPath = [];
+        rainbowArmed = null;
+
+        boardElement.classList.remove("locked");
+        pauseCover.classList.remove("visible");
+        pauseCover.setAttribute("aria-hidden", "true");
+        gameCharacter.classList.remove("combo", "danger");
+
+        buildInitialBoard();
+        renderBoard(true);
+        updateHud();
+        showScreen(gameScreen);
+
+        setStatus(
+          `${currentConfig.minimum}個以上つないでね！`
+        );
+
+        playSound("start");
+        startTimer();
+        resetHintTimer();
+      }
+
+      function endGame() {
+        if (!gameActive) return;
+
+        gameActive = false;
+        paused = false;
+        processing = false;
+        remainingTime = 0;
+
+        stopTimer();
+        clearTimeout(hintTimeoutId);
+        clearTimeout(statusTimeoutId);
+        cancelSelection();
+
+        boardElement.classList.add("locked");
+        pauseCover.classList.remove("visible");
+        gameCharacter.classList.remove("combo", "danger");
+
+        const previousHighScore = getHighScore();
+        const isNewRecord = score > previousHighScore;
+
+        if (isNewRecord) {
+          saveHighScore(score);
+        }
+
+        document.getElementById("finalScore").textContent =
+          formatNumber(score);
+        document.getElementById("resultHighScore").textContent =
+          formatNumber(Math.max(previousHighScore, score));
+        document.getElementById("totalRemoved").textContent =
+          formatNumber(removedTotal);
+        document.getElementById("bestCombo").textContent =
+          String(bestCombo);
+        document.getElementById("resultDifficulty").textContent =
+          currentConfig.label;
+        document.getElementById("newRecord")
+          .classList.toggle("visible", isNewRecord);
+
+        updateHud();
+        playSound("end");
+        vibrate([30, 50, 30]);
+
+        setTimeout(() => {
+          showScreen(resultScreen);
+        }, 250);
+      }
+
+      function returnToTitle() {
+        gameActive = false;
+        paused = false;
+        processing = false;
+
+        stopTimer();
+        clearTimeout(hintTimeoutId);
+        clearTimeout(statusTimeoutId);
+        clearTimeout(characterTimeoutId);
+
+        cancelSelection();
+        rainbowArmed = null;
+        pauseCover.classList.remove("visible");
+
+        showScreen(titleScreen);
+      }
+
+      /* =========================================================
+         イベント登録
+      ========================================================= */
+      document.querySelectorAll(".difficulty-button").forEach(button => {
+        button.addEventListener("click", () => {
+          selectedDifficulty = button.dataset.difficulty;
+
+          document.querySelectorAll(".difficulty-button").forEach(item => {
+            const selected = item === button;
+            item.classList.toggle("selected", selected);
+            item.setAttribute(
+              "aria-checked",
+              selected ? "true" : "false"
+            );
+          });
+
+          ensureAudio();
+          playTone(510, .08, "sine", .02);
+        });
+      });
+
+      document.getElementById("startButton")
+        .addEventListener("click", startGame);
+
+      document.getElementById("retryButton")
+        .addEventListener("click", startGame);
+
+      document.getElementById("backTitleButton")
+        .addEventListener("click", returnToTitle);
+
+      document.getElementById("pauseButton")
+        .addEventListener("click", () => pauseGame(false));
+
+      document.getElementById("resumeButton")
+        .addEventListener("click", resumeGame);
+
+      document.getElementById("titleSoundButton")
+        .addEventListener("click", toggleSound);
+
+      document.getElementById("gameSoundButton")
+        .addEventListener("click", toggleSound);
+
+      document.getElementById("howToButton")
+        .addEventListener("click", () => {
+          ensureAudio();
+          howToModal.classList.add("visible");
+          document.getElementById("closeHowToButton").focus();
+        });
+
+      document.getElementById("closeHowToButton")
+        .addEventListener("click", () => {
+          howToModal.classList.remove("visible");
+          document.getElementById("howToButton").focus();
+        });
+
+      howToModal.addEventListener("pointerdown", event => {
+        if (event.target === howToModal) {
+          howToModal.classList.remove("visible");
+        }
+      });
+
+      boardElement.addEventListener("pointerdown", handlePointerDown);
+      boardElement.addEventListener("pointermove", handlePointerMove);
+      boardElement.addEventListener("pointerup", handlePointerUp);
+      boardElement.addEventListener("pointercancel", handlePointerCancel);
+      boardElement.addEventListener("lostpointercapture", event => {
+        if (
+          pointerActive &&
+          event.pointerId === activePointerId
+        ) {
+          finishPointerOperation();
+        }
+      });
+
+      /* タブが非表示になった時は自動停止 */
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden && gameActive && !paused) {
+          pauseGame(true);
+        } else if (!document.hidden && gameActive && !paused) {
+          lastTimerTimestamp = performance.now();
+        }
+      });
+
+      /* 画面サイズ変更後に選択線の位置を補正 */
+      window.addEventListener("resize", () => {
+        if (selectedPath.length > 0) {
+          requestAnimationFrame(updateConnectionLine);
+        }
+      });
+
+      /* ダブルタップ拡大やコンテキストメニューによる誤操作を抑制 */
+      boardElement.addEventListener("contextmenu", event => {
+        event.preventDefault();
+      });
+
+      let lastTouchEnd = 0;
+      document.addEventListener(
+        "touchend",
+        event => {
+          const now = Date.now();
+
+          if (
+            now - lastTouchEnd <= 300 &&
+            event.target.closest?.("#board")
+          ) {
+            event.preventDefault();
+          }
+
+          lastTouchEnd = now;
+        },
+        { passive: false }
+      );
+
+      /* ESCキーでモーダルを閉じる、または一時停止する */
+      document.addEventListener("keydown", event => {
+        if (event.key !== "Escape") return;
+
+        if (howToModal.classList.contains("visible")) {
+          howToModal.classList.remove("visible");
+        } else if (gameActive && !paused) {
+          pauseGame(false);
+        }
+      });
+
+      function wait(milliseconds) {
+        return new Promise(resolve => {
+          setTimeout(resolve, milliseconds);
+        });
+      }
+
+      updateSoundButtons();
+    })();
+  </script>
+</body>
+</html>

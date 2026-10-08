@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#fff5df">
+  <title>あそびの広場 | GAME POP!</title>
+  <style>
+    :root{color-scheme:light;--ink:#473650;--pink:#fb6b9e}
+    *{box-sizing:border-box}
+    body{margin:0;color:var(--ink);font-family:"Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;background-color:#fff5df;background-image:radial-gradient(#e8d7be 1.5px,transparent 1.5px);background-size:22px 22px}
+    main{width:min(100%,520px);margin:auto;padding:calc(32px + env(safe-area-inset-top,0px)) 22px calc(24px + env(safe-area-inset-bottom,0px))}
+    header{position:relative;text-align:center;padding:12px 0 28px}
+    .eyebrow{display:inline-block;margin:0 0 14px;padding:7px 15px;border:2px solid var(--ink);border-radius:99px;background:#fffdf7;box-shadow:3px 3px 0 var(--ink);font-size:11px;font-weight:900;letter-spacing:.15em}
+    h1{margin:0;font-size:clamp(43px,12vw,64px);line-height:.98;letter-spacing:-.04em;font-weight:1000;color:var(--pink);text-shadow:3px 3px 0 #fff,5px 5px 0 var(--ink);transform:rotate(-3deg)}
+    h1 span{display:block;color:#64c7d1}
+    .intro{margin:23px 0 0;font-weight:800;font-size:14px;line-height:1.8}
+    .spark{position:absolute;font-size:30px;color:#ffae34;top:52px;left:0;transform:rotate(-15deg)}
+    .spark.right{left:auto;right:2px;top:135px;color:var(--pink);font-size:25px}
+    .section-label{display:flex;align-items:center;justify-content:space-between;margin:0 2px 14px;font-size:12px;font-weight:900;letter-spacing:.08em}
+    .section-label span{font-size:10px;background:var(--ink);color:#fff;border-radius:99px;padding:5px 10px;letter-spacing:.02em}
+    .games{display:grid;gap:20px}
+    .game{position:relative;display:block;overflow:hidden;border:2px solid var(--ink);border-radius:25px;background:#fffdf8;color:var(--ink);text-decoration:none;box-shadow:5px 6px 0 var(--ink);transition:transform .16s,box-shadow .16s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+    .game:hover{transform:translateY(-3px);box-shadow:5px 9px 0 var(--ink)}
+    .game:active{transform:translate(3px,4px);box-shadow:2px 2px 0 var(--ink)}
+    .game:focus-visible{outline:4px solid #377cf3;outline-offset:6px}
+    .art{position:relative;height:128px;display:flex;align-items:center;justify-content:center;gap:18px;border-bottom:2px solid var(--ink);overflow:hidden}
+    .art:before{content:"";position:absolute;width:170px;height:170px;border:2px dashed #ffffffa0;border-radius:50%;transform:rotate(25deg)}
+    .art i{position:relative;font-size:57px;font-style:normal;filter:drop-shadow(0 6px 0 #00000012);transform:rotate(-12deg)}
+    .art i:nth-of-type(2){font-size:72px;transform:rotate(9deg)}
+    .art i:nth-of-type(3){font-size:39px;transform:rotate(-8deg)}
+    .number{position:absolute;top:12px;left:14px;font-size:10px;font-weight:1000;background:#fffdf8;color:var(--ink);border:1.5px solid var(--ink);padding:4px 9px;border-radius:99px}
+    .tag{position:absolute;bottom:11px;right:12px;font-size:10px;font-weight:900;background:#fffdf8;color:var(--ink);border-radius:99px;padding:5px 10px;border:1.5px solid var(--ink)}
+    .candy .art{background:repeating-linear-gradient(-35deg,#ffc3d6 0 20px,#ffd4e1 20px 40px)}
+    .neon .art{background-color:#101c43;background-image:linear-gradient(#32efff15 1px,transparent 1px),linear-gradient(90deg,#32efff15 1px,transparent 1px);background-size:23px 23px}
+    .neon .art:before{border-color:#32efff;box-shadow:0 0 22px #32efff55}
+    .memory .art{background:radial-gradient(ellipse at 50% 90%,#8254b7,#292349);color:#ffe59b}
+    .memory .art:before{border-color:#f6d36b80}
+    .puku .art{background:radial-gradient(circle at 15% 25%,#ffffff88 0 7px,transparent 8px),radial-gradient(circle at 85% 70%,#ffffff88 0 12px,transparent 13px),linear-gradient(130deg,#a7e9f4,#c6f2dc)}
+    .bubble{display:grid;place-items:center;width:65px;height:65px;border-radius:45% 48% 42% 46%;background:#ff99bd;border:3px solid #fff;box-shadow:inset 0 -8px 0 #e96d9b50,0 6px 0 #00000010;font-size:27px;font-weight:900;transform:rotate(-12deg)}
+    .bubble:nth-of-type(2){width:79px;height:79px;background:#ffe080;transform:translateY(-5px) rotate(9deg)}
+    .bubble:nth-of-type(3){width:52px;height:52px;background:#b9a1ee;transform:rotate(15deg)}
+    .info{padding:17px 19px 19px}
+    .en{margin:0 0 6px;font-size:10px;letter-spacing:.13em;font-weight:900;color:#8a748f}
+    h2{margin:0;font-size:clamp(18px,5vw,23px);line-height:1.4;font-weight:1000;letter-spacing:-.025em}
+    .description{margin:7px 0 15px;font-size:12px;line-height:1.7;font-weight:700;color:#7b687f}
+    .play{display:flex;align-items:center;justify-content:center;gap:10px;border-radius:13px;background:#ffe08b;padding:12px 15px;font-size:18px;font-weight:1000;border:1.5px solid var(--ink)}
+    .play b{font-size:18px;line-height:1}
+    .candy .play{background:#ffcee0}.neon .play{background:#b3edf2}.memory .play{background:#e0d1f6}
+    footer{text-align:center;margin-top:30px;font-size:11px;font-weight:800;color:#8a748f;line-height:1.9}
+    footer strong{display:block;color:var(--ink);letter-spacing:.13em;font-size:12px}
+    @media(max-width:350px){main{padding-left:16px;padding-right:16px}.art{height:112px}.info{padding:15px}.spark{font-size:22px}h2{font-size:18px}}
+    @media(prefers-reduced-motion:reduce){.game{transition:none}}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">ようこそ、あそびの広場へ！</p>
+      <span class="spark" aria-hidden="true">✦</span>
+      <h1>GAME<span>POP!</span></h1>
+      <span class="spark right" aria-hidden="true">✦</span>
+      <p class="intro">今日は、どれであそぶ？<br>お気に入りのゲームをタップしよう。</p>
+    </header>
+    <div class="section-label">ゲームをえらぶ <span>4 GAMES</span></div>
+    <nav class="games" aria-label="ゲーム一覧">
+      <a class="game candy" href="Candy%20Pop%20Adventure.html" aria-label="キャンディポップアドベンチャーであそぶ">
+        <div class="art" aria-hidden="true"><span class="number">01</span><i>🍬</i><i>🐰</i><i>🍭</i><span class="tag">ジャンプアクション</span></div>
+        <div class="info"><p class="en">CANDY POP ADVENTURE</p><h2>キャンディポップ<br>アドベンチャー</h2><p class="description">ぴょんっとジャンプ！お菓子の国で<br>キャンディをたくさん集めよう。</p><span class="play">あそぶ <b aria-hidden="true">→</b></span></div>
+      </a>
+      <a class="game neon" href="CIRCUIT%20PUZZLE%20NEON%20LINK.html" aria-label="NEON LINKであそぶ">
+        <div class="art" aria-hidden="true"><span class="number">02</span><i>⚡</i><i>🔌</i><i>💎</i><span class="tag">回路パズル</span></div>
+        <div class="info"><p class="en">CIRCUIT PUZZLE</p><h2>NEON LINK</h2><p class="description">パネルを回して、光をつなごう。<br>きらめく回路迷宮にチャレンジ！</p><span class="play">あそぶ <b aria-hidden="true">→</b></span></div>
+      </a>
+      <a class="game memory" href="Mistic%20Memory.html" aria-label="ミスティック・メモリーであそぶ">
+        <div class="art" aria-hidden="true"><span class="number">03</span><i>📚</i><i>🔮</i><i>✨</i><span class="tag">記憶力パズル</span></div>
+        <div class="info"><p class="en">MISTIC MEMORY</p><h2>ミスティック・メモリー</h2><p class="description">同じ魔法のカードを見つけよう。<br>深淵の図書館に眠る記憶を解放！</p><span class="play">あそぶ <b aria-hidden="true">→</b></span></div>
+      </a>
+      <a class="game puku" href="Puku%20Link.html" aria-label="ぷくリンクであそぶ">
+        <div class="art" aria-hidden="true"><span class="number">04</span><span class="bubble">•ᴗ•</span><span class="bubble">•ᴗ•</span><span class="bubble">•ᴗ•</span><span class="tag">つなげるパズル</span></div>
+        <div class="info"><p class="en">PUKU LINK</p><h2>ぷくリンク</h2><p class="description">かわいいぷくたちをつなげて、<br>気持ちいいコンボを決めよう！</p><span class="play">あそぶ <b aria-hidden="true">→</b></span></div>
+      </a>
+    </nav>
+    <footer><strong>LET'S PLAY &amp; HAVE FUN!</strong>スマホを縦にしてあそんでね。</footer>
+  </main>
+</body>
+</html>

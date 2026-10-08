@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#060817">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>NEON LINK：ルミナの回路迷宮</title>
+  <style>
+    :root {
+      --bg: #050713;
+      --panel: rgba(17, 24, 54, .78);
+      --cyan: #32efff;
+      --blue: #4c7dff;
+      --purple: #b45cff;
+      --danger: #ff526d;
+      --warning: #ffb84a;
+      --text: #f2f8ff;
+      --muted: #8fa4c6;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    button {
+      min-height: 46px;
+      border: 1px solid rgba(80, 225, 255, .38);
+      border-radius: 14px;
+      color: var(--text);
+      background: linear-gradient(145deg, rgba(36, 49, 95, .95), rgba(14, 20, 48, .95));
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .28), inset 0 1px rgba(255, 255, 255, .08);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform .12s, border-color .2s, box-shadow .2s, opacity .2s;
+    }
+
+    button:active {
+      transform: scale(.96);
+    }
+
+    button:focus-visible {
+      outline: 3px solid #fff;
+      outline-offset: 2px;
+    }
+
+    button:disabled {
+      opacity: .38;
+      cursor: default;
+    }
+
+    .primary {
+      color: #03131b;
+      background: linear-gradient(135deg, #74f7ff, #43a7ff);
+      border-color: #a8fbff;
+      box-shadow: 0 0 24px rgba(50, 239, 255, .35);
+    }
+
+    .danger {
+      border-color: rgba(255, 82, 109, .65);
+      background: linear-gradient(145deg, rgba(108, 25, 53, .9), rgba(47, 14, 34, .96));
+    }
+
+    #app {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 18% 15%, rgba(49, 96, 255, .20), transparent 35%),
+        radial-gradient(circle at 82% 82%, rgba(180, 92, 255, .16), transparent 38%),
+        linear-gradient(160deg, #09132d, #050713 55%, #09051a);
+    }
+
+    #app::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: .18;
+      background-image:
+        linear-gradient(rgba(62, 226, 255, .12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(62, 226, 255, .12) 1px, transparent 1px);
+      background-size: 34px 34px;
+      transform: perspective(500px) rotateX(58deg) scale(1.6);
+      transform-origin: center bottom;
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      overflow-y: auto;
+      padding:
+        calc(14px + var(--safe-top))
+        14px
+        calc(14px + var(--safe-bottom));
+      z-index: 2;
+    }
+
+    .screen.active {
+      display: flex;
+      animation: screenIn .3s ease both;
+    }
+
+    @keyframes screenIn {
+      from { opacity: 0; transform: scale(.985); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .card {
+      width: min(100%, 480px);
+      border: 1px solid rgba(95, 222, 255, .26);
+      border-radius: 24px;
+      background: linear-gradient(145deg, rgba(22, 31, 68, .86), rgba(8, 12, 31, .9));
+      box-shadow: 0 24px 70px rgba(0, 0, 0, .42), inset 0 1px rgba(255, 255, 255, .08);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    /* タイトル画面 */
+    #titleScreen {
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .title-card {
+      padding: 22px 18px 18px;
+      text-align: center;
+    }
+
+    .eyebrow {
+      margin: 0 0 3px;
+      color: var(--cyan);
+      font-size: .72rem;
+      font-weight: 900;
+      letter-spacing: .28em;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.7rem, 8vw, 2.55rem);
+      line-height: 1;
+      letter-spacing: .04em;
+      text-shadow: 0 0 14px rgba(50, 239, 255, .55);
+    }
+
+    h1 span {
+      display: block;
+      margin-top: 8px;
+      color: #a8b7d7;
+      font-size: .72rem;
+      letter-spacing: .18em;
+      text-shadow: none;
+    }
+
+    .instructions {
+      margin: 12px auto 15px;
+      max-width: 360px;
+      color: #c4d2ea;
+      font-size: .85rem;
+      line-height: 1.55;
+    }
+
+    .lumina {
+      position: relative;
+      width: 92px;
+      height: 76px;
+      margin: 12px auto;
+      filter: drop-shadow(0 0 15px rgba(50, 239, 255, .55));
+      animation: float 2.6s ease-in-out infinite;
+    }
+
+    .lumina.small {
+      width: 60px;
+      height: 48px;
+      margin: 0;
+    }
+
+    .lumina-body {
+      position: absolute;
+      inset: 8px 9px 5px;
+      border: 2px solid rgba(172, 250, 255, .88);
+      border-radius: 48% 52% 45% 45%;
+      background:
+        radial-gradient(circle at 50% 53%, #fff 0 7%, #6ff7ff 8% 17%, #1379cf 19% 23%, transparent 25%),
+        linear-gradient(145deg, rgba(70, 233, 255, .77), rgba(74, 71, 218, .74));
+      box-shadow: inset 0 0 18px #1bd9ff, 0 0 18px rgba(50, 239, 255, .55);
+    }
+
+    .lumina-eye {
+      position: absolute;
+      top: 30%;
+      width: 8%;
+      height: 12%;
+      border-radius: 50%;
+      background: #071022;
+      z-index: 2;
+      transition: .2s;
+    }
+
+    .lumina-eye.left { left: 34%; }
+    .lumina-eye.right { right: 34%; }
+
+    .lumina-mouth {
+      position: absolute;
+      left: 44%;
+      top: 47%;
+      width: 12%;
+      height: 7%;
+      z-index: 3;
+      border-bottom: 2px solid #071022;
+      border-radius: 50%;
+    }
+
+    .lumina-ear {
+      position: absolute;
+      top: 20%;
+      width: 18%;
+      height: 26%;
+      border-radius: 70% 30%;
+      background: linear-gradient(145deg, #64efff, #6350e3);
+      box-shadow: 0 0 10px #28dcff;
+    }
+
+    .lumina-ear.left { left: 0; transform: rotate(-32deg); }
+    .lumina-ear.right { right: 0; transform: scaleX(-1) rotate(-32deg); }
+
+    .lumina.happy .lumina-eye {
+      height: 8%;
+      border-radius: 50% 50% 0 0;
+      background: transparent;
+      border-top: 2px solid #071022;
+    }
+
+    .lumina.happy .lumina-mouth {
+      height: 11%;
+      border-bottom-width: 3px;
+    }
+
+    .lumina.worried .lumina-mouth {
+      border-bottom: 0;
+      border-top: 2px solid #071022;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(-1deg); }
+      50% { transform: translateY(-7px) rotate(1deg); }
+    }
+
+    .difficulty {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 6px 0 12px;
+    }
+
+    .difficulty button {
+      min-width: 0;
+      padding: 9px 4px 7px;
+      font-size: .78rem;
+    }
+
+    .difficulty button strong {
+      display: block;
+      font-size: .92rem;
+    }
+
+    .difficulty button small {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: .65rem;
+    }
+
+    .difficulty button.selected {
+      color: #061320;
+      border-color: #fff;
+      background: linear-gradient(135deg, #7af8ff, #8d71ff);
+      box-shadow: 0 0 20px rgba(68, 223, 255, .48);
+    }
+
+    .difficulty button.selected small {
+      color: #153253;
+    }
+
+    .title-actions {
+      display: grid;
+      grid-template-columns: 1fr 52px;
+      gap: 8px;
+    }
+
+    #startButton {
+      font-size: 1.02rem;
+    }
+
+    .highscores {
+      margin-top: 13px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(140, 194, 255, .15);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      color: var(--muted);
+      font-size: .67rem;
+    }
+
+    .highscores strong {
+      display: block;
+      color: var(--text);
+      margin-top: 2px;
+      font-size: .83rem;
+    }
+
+    /* ゲーム画面 */
+    #gameScreen {
+      padding-left: 9px;
+      padding-right: 9px;
+      overflow: hidden;
+    }
+
+    .game-shell {
+      width: min(100%, 520px);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .hud {
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: 1.25fr 1fr 1fr 1fr;
+      gap: 5px;
+    }
+
+    .stat {
+      min-width: 0;
+      padding: 6px 5px;
+      text-align: center;
+      border: 1px solid rgba(91, 201, 255, .20);
+      border-radius: 11px;
+      background: rgba(8, 14, 35, .78);
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: .56rem;
+      font-weight: 800;
+      letter-spacing: .06em;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 1px;
+      overflow: hidden;
+      font-size: clamp(.9rem, 4vw, 1.12rem);
+      line-height: 1.1;
+      text-overflow: ellipsis;
+    }
+
+    .stat.time.danger-time {
+      border-color: var(--danger);
+      color: #fff;
+      background: rgba(105, 13, 42, .75);
+      animation: dangerPulse .64s ease-in-out infinite alternate;
+    }
+
+    @keyframes dangerPulse {
+      to { box-shadow: 0 0 18px rgba(255, 50, 92, .65); }
+    }
+
+    .fever-wrap {
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: 58px 1fr 38px;
+      align-items: center;
+      gap: 6px;
+      min-height: 21px;
+    }
+
+    .fever-wrap span {
+      color: #d3c0ff;
+      font-size: .62rem;
+      font-weight: 900;
+    }
+
+    .fever-track {
+      height: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(181, 125, 255, .45);
+      border-radius: 99px;
+      background: rgba(0, 0, 0, .38);
+    }
+
+    #feverFill {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #48eaff, #8268ff, #ff54e8);
+      box-shadow: 0 0 12px #b45cff;
+      transition: width .28s;
+    }
+
+    #feverText {
+      text-align: right;
+    }
+
+    .companion-row {
+      flex: 0 0 50px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 2px 9px;
+      border: 1px solid rgba(94, 215, 255, .15);
+      border-radius: 14px;
+      background: rgba(8, 14, 35, .63);
+    }
+
+    #message {
+      flex: 1;
+      color: #d9e7fa;
+      font-size: .77rem;
+      line-height: 1.25;
+    }
+
+    .board-shell {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #board {
+      --size: 4;
+      display: grid;
+      grid-template-columns: repeat(var(--size), 1fr);
+      gap: clamp(3px, 1vw, 6px);
+      width: min(100%, calc(100dvh - 245px), 500px);
+      max-height: 100%;
+      aspect-ratio: 1;
+      padding: 6px;
+      border: 1px solid rgba(70, 224, 255, .25);
+      border-radius: 18px;
+      background: rgba(5, 9, 25, .76);
+      box-shadow: inset 0 0 30px rgba(4, 7, 22, .88), 0 13px 38px rgba(0, 0, 0, .3);
+    }
+
+    .tile {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      padding: 0;
+      overflow: hidden;
+      border: 1px solid rgba(96, 129, 187, .24);
+      border-radius: clamp(7px, 2vw, 12px);
+      background: linear-gradient(145deg, rgba(23, 31, 65, .98), rgba(8, 13, 31, .98));
+      box-shadow: inset 0 1px rgba(255, 255, 255, .035);
+      transform: translateZ(0);
+    }
+
+    .tile:active {
+      transform: scale(.92);
+    }
+
+    .tile.fixed {
+      border-color: rgba(255, 194, 70, .68);
+    }
+
+    .tile.locked {
+      pointer-events: none;
+      border-color: var(--danger);
+      filter: saturate(.55);
+    }
+
+    .tile.locked::after {
+      content: "◆";
+      position: absolute;
+      right: 7%;
+      bottom: 3%;
+      color: var(--danger);
+      font-size: clamp(.47rem, 2.3vw, .8rem);
+      text-shadow: 0 0 8px var(--danger);
+      z-index: 5;
+    }
+
+    .tile.start::before,
+    .tile.goal::before {
+      position: absolute;
+      left: 5%;
+      top: 4%;
+      z-index: 5;
+      color: var(--warning);
+      font-size: clamp(.44rem, 2vw, .72rem);
+      font-weight: 1000;
+      text-shadow: 0 0 8px var(--warning);
+    }
+
+    .tile.start::before { content: "S"; }
+    .tile.goal::before { content: "G"; }
+
+    .pipe {
+      position: absolute;
+      inset: 0;
+      transform: rotate(calc(var(--rotation) * 90deg));
+      transition: transform .17s cubic-bezier(.2, .8, .25, 1.25);
+    }
+
+    .segment {
+      position: absolute;
+      z-index: 1;
+      background: #263859;
+      box-shadow: inset 0 0 0 1px rgba(147, 175, 222, .13);
+      transition: background .2s, box-shadow .2s;
+    }
+
+    .segment.n {
+      left: 42%;
+      top: -1px;
+      width: 16%;
+      height: 51%;
+      border-radius: 8px 8px 2px 2px;
+    }
+
+    .segment.e {
+      left: 49%;
+      top: 42%;
+      width: 52%;
+      height: 16%;
+      border-radius: 2px 8px 8px 2px;
+    }
+
+    .segment.s {
+      left: 42%;
+      top: 49%;
+      width: 16%;
+      height: 52%;
+      border-radius: 2px 2px 8px 8px;
+    }
+
+    .segment.w {
+      left: -1px;
+      top: 42%;
+      width: 52%;
+      height: 16%;
+      border-radius: 8px 2px 2px 8px;
+    }
+
+    .hub {
+      position: absolute;
+      left: 36%;
+      top: 36%;
+      width: 28%;
+      height: 28%;
+      z-index: 2;
+      border: 2px solid #496083;
+      border-radius: 50%;
+      background: #172642;
+      box-shadow: inset 0 0 8px rgba(118, 158, 211, .23);
+      transition: .2s;
+    }
+
+    .tile.powered {
+      border-color: rgba(91, 244, 255, .72);
+      box-shadow: inset 0 0 12px rgba(30, 193, 255, .2), 0 0 12px rgba(50, 239, 255, .18);
+    }
+
+    .tile.powered .segment {
+      background: linear-gradient(90deg, #ecffff, #37eaff);
+      box-shadow: 0 0 8px #20dfff, 0 0 14px rgba(32, 223, 255, .55);
+    }
+
+    .tile.powered .hub {
+      border-color: white;
+      background: #40edff;
+      box-shadow: 0 0 9px #fff, 0 0 18px #28dfff;
+    }
+
+    .tile.flash {
+      animation: tileFlash .3s ease;
+    }
+
+    @keyframes tileFlash {
+      50% { transform: scale(.87); filter: brightness(1.8); }
+    }
+
+    .controls {
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: 1.45fr .85fr .65fr;
+      gap: 6px;
+    }
+
+    .controls button {
+      padding: 5px 7px;
+      font-size: .76rem;
+    }
+
+    .score-float {
+      position: fixed;
+      left: 50%;
+      top: 42%;
+      z-index: 30;
+      pointer-events: none;
+      color: #fff;
+      font-size: 1.45rem;
+      font-weight: 1000;
+      text-shadow: 0 0 8px var(--cyan), 0 0 18px var(--blue);
+      animation: scoreFly .9s ease-out forwards;
+    }
+
+    @keyframes scoreFly {
+      from { opacity: 0; transform: translate(-50%, 20px) scale(.8); }
+      20% { opacity: 1; }
+      to { opacity: 0; transform: translate(-50%, -70px) scale(1.18); }
+    }
+
+    .clear-banner {
+      position: fixed;
+      left: 50%;
+      top: 43%;
+      z-index: 35;
+      pointer-events: none;
+      white-space: nowrap;
+      color: #fff;
+      font-size: clamp(2rem, 11vw, 4.2rem);
+      font-weight: 1000;
+      letter-spacing: .08em;
+      text-shadow: 0 0 10px #fff, 0 0 25px var(--cyan), 0 0 45px var(--purple);
+      animation: clearPop 1.05s ease forwards;
+    }
+
+    @keyframes clearPop {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(.3); }
+      35% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+      75% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -70%) scale(1.18); }
+    }
+
+    body.fever #app {
+      animation: feverGlow 1.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes feverGlow {
+      to { filter: saturate(1.3); box-shadow: inset 0 0 80px rgba(179, 70, 255, .2); }
+    }
+
+    /* モーダル */
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(2, 4, 14, .82);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .modal.open {
+      display: flex;
+      animation: fadeIn .22s ease both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .modal-card {
+      width: min(100%, 390px);
+      padding: 22px;
+      text-align: center;
+    }
+
+    .modal-card h2 {
+      margin: 0 0 14px;
+      font-size: 1.75rem;
+      text-shadow: 0 0 15px rgba(67, 229, 255, .42);
+    }
+
+    .modal-actions {
+      display: grid;
+      gap: 9px;
+      margin-top: 17px;
+    }
+
+    .results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin: 12px 0;
+    }
+
+    .result {
+      padding: 9px;
+      border-radius: 12px;
+      background: rgba(7, 13, 34, .68);
+      color: var(--muted);
+      font-size: .7rem;
+    }
+
+    .result strong {
+      display: block;
+      margin-top: 3px;
+      color: var(--text);
+      font-size: 1.12rem;
+    }
+
+    .rank {
+      margin: 5px auto 12px;
+      color: var(--cyan);
+      font-size: 3.2rem;
+      font-weight: 1000;
+      line-height: 1;
+      text-shadow: 0 0 24px var(--cyan);
+    }
+
+    #orientationNotice {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      text-align: center;
+      background: #050713;
+    }
+
+    .phone-icon {
+      width: 60px;
+      height: 100px;
+      margin: 0 auto 20px;
+      border: 4px solid var(--cyan);
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(50, 239, 255, .6);
+      animation: turnPhone 1.8s ease-in-out infinite;
+    }
+
+    @keyframes turnPhone {
+      0%, 25% { transform: rotate(90deg); }
+      65%, 100% { transform: rotate(0); }
+    }
+
+    @media (orientation: landscape) and (max-height: 600px) {
+      #orientationNotice { display: flex; }
+    }
+
+    @media (max-height: 690px) {
+      .companion-row { flex-basis: 44px; }
+      .lumina.small { transform: scale(.85); }
+      #board { width: min(100%, calc(100dvh - 217px)); }
+      .controls button { min-height: 42px; }
+    }
+
+    @media (max-height: 570px) {
+      .companion-row { display: none; }
+      #board { width: min(100%, calc(100dvh - 158px)); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  
+/* ゲーム一覧へのリンク */
+.hub-back{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;min-height:44px;font-family:inherit;font-weight:900;cursor:pointer;touch-action:manipulation}.hub-back:focus-visible{outline:3px solid #ffdc58;outline-offset:4px}.hub-back{padding:11px 16px;border:1px solid #32efff80;border-radius:14px;color:#b6f9ff;background:linear-gradient(145deg,#24315f,#0e1430);box-shadow:0 0 16px #32efff20}.title-actions .hub-back{grid-column:1/-1}.hub-back:active{transform:scale(.96)}
+</style>
+</head>
+<body>
+  <div id="app">
+    <main id="titleScreen" class="screen active" aria-label="タイトル画面">
+      <section class="card title-card">
+        <p class="eyebrow">CIRCUIT PUZZLE</p>
+        <h1>NEON LINK<span>ルミナの回路迷宮</span></h1>
+
+        <div class="lumina" aria-label="主人公ルミナ">
+          <div class="lumina-ear left"></div>
+          <div class="lumina-ear right"></div>
+          <div class="lumina-body">
+            <i class="lumina-eye left"></i>
+            <i class="lumina-eye right"></i>
+            <i class="lumina-mouth"></i>
+          </div>
+        </div>
+
+        <p class="instructions">
+          パネルをタップして回転させ、<b>S</b>から<b>G</b>まで光をつなごう。<br>
+          120秒でできるだけ多くの回路を完成させてください。
+        </p>
+
+        <div class="difficulty" role="group" aria-label="難易度選択">
+          <button type="button" data-difficulty="easy" aria-label="難易度イージー">
+            <strong>EASY</strong><small>4×4</small>
+          </button>
+          <button type="button" data-difficulty="normal" class="selected" aria-label="難易度ノーマル">
+            <strong>NORMAL</strong><small>5×5</small>
+          </button>
+          <button type="button" data-difficulty="hard" aria-label="難易度ハード">
+            <strong>HARD</strong><small>6×6</small>
+          </button>
+        </div>
+
+        <div class="title-actions">
+          <button id="startButton" class="primary" type="button" aria-label="ゲーム開始">GAME START</button>
+          <button id="titleSound" type="button" aria-label="サウンド切り替え">🔊</button>
+          <a class="hub-back " href="index.html" aria-label="ゲーム一覧にもどる">← もどる</a>
+        </div>
+
+        <div class="highscores" aria-label="難易度別ハイスコア">
+          <div>EASY<strong id="highEasy">0</strong></div>
+          <div>NORMAL<strong id="highNormal">0</strong></div>
+          <div>HARD<strong id="highHard">0</strong></div>
+        </div>
+      </section>
+    </main>
+
+    <main id="gameScreen" class="screen" aria-label="ゲーム画面">
+      <div class="game-shell">
+        <header class="hud">
+          <div class="stat"><span>SCORE</span><strong id="scoreValue">0</strong></div>
+          <div id="timeStat" class="stat time"><span>TIME</span><strong id="timeValue">120.0</strong></div>
+          <div class="stat"><span>STAGE</span><strong id="stageValue">1</strong></div>
+          <div class="stat"><span>COMBO</span><strong id="comboValue">×1</strong></div>
+        </header>
+
+        <div class="fever-wrap" aria-label="フィーバーゲージ">
+          <span>FEVER</span>
+          <div class="fever-track"><div id="feverFill"></div></div>
+          <span id="feverText">0%</span>
+        </div>
+
+        <div class="companion-row">
+          <div id="gameLumina" class="lumina small" aria-hidden="true">
+            <div class="lumina-ear left"></div>
+            <div class="lumina-ear right"></div>
+            <div class="lumina-body">
+              <i class="lumina-eye left"></i>
+              <i class="lumina-eye right"></i>
+              <i class="lumina-mouth"></i>
+            </div>
+          </div>
+          <div id="message" aria-live="polite">回路をつないでね！</div>
+        </div>
+
+        <div class="board-shell">
+          <div id="board" role="grid" aria-label="回路パズル盤面"></div>
+        </div>
+
+        <nav class="controls">
+          <button id="hintButton" type="button" aria-label="ヒントを使う">HINT × <span id="hintCount">3</span></button>
+          <button id="pauseButton" type="button" aria-label="一時停止">PAUSE</button>
+          <button id="gameSound" type="button" aria-label="サウンド切り替え">🔊</button>
+        </nav>
+      </div>
+    </main>
+
+    <div id="pauseModal" class="modal" role="dialog" aria-modal="true" aria-label="一時停止">
+      <section class="card modal-card">
+        <h2>PAUSED</h2>
+        <p>エネルギー転送を一時停止しました。</p>
+        <div class="modal-actions"><a class="hub-back " href="index.html" aria-label="ゲーム一覧にもどる">← もどる</a>
+          <button id="resumeButton" class="primary" type="button">ゲーム再開</button>
+          <button id="restartButton" type="button">最初からやり直す</button>
+          <button id="pauseTitleButton" class="danger" type="button">タイトルに戻る</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="gameOverModal" class="modal" role="dialog" aria-modal="true" aria-label="ゲームオーバー">
+      <section class="card modal-card">
+        <h2>TIME UP</h2>
+        <div id="rankValue" class="rank">A</div>
+        <div class="results">
+          <div class="result">FINAL SCORE<strong id="finalScore">0</strong></div>
+          <div class="result">HIGH SCORE<strong id="finalHigh">0</strong></div>
+          <div class="result">CLEAR STAGE<strong id="finalStages">0</strong></div>
+          <div class="result">MAX COMBO<strong id="finalCombo">1</strong></div>
+          <div class="result" style="grid-column:1/-1">DIFFICULTY<strong id="finalDifficulty">NORMAL</strong></div>
+        </div>
+        <div class="modal-actions"><a class="hub-back " href="index.html" aria-label="ゲーム一覧にもどる">← もどる</a>
+          <button id="retryButton" class="primary" type="button">RETRY</button>
+          <button id="overTitleButton" type="button">難易度選択へ戻る</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="orientationNotice">
+      <div>
+        <div class="phone-icon"></div>
+        <h2>端末を縦向きにしてください</h2>
+        <p>このゲームは縦画面でお楽しみください。</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const DIRS = [
+        { dr: -1, dc: 0, bit: 1, opposite: 4, name: "n" },
+        { dr: 0, dc: 1, bit: 2, opposite: 8, name: "e" },
+        { dr: 1, dc: 0, bit: 4, opposite: 1, name: "s" },
+        { dr: 0, dc: -1, bit: 8, opposite: 2, name: "w" }
+      ];
+
+      const SETTINGS = {
+        easy:   { size: 4, timeBonus: 5, multiplier: 1, decoys: .22 },
+        normal: { size: 5, timeBonus: 3, multiplier: 1.35, decoys: .36 },
+        hard:   { size: 6, timeBonus: 1, multiplier: 1.8, decoys: .52 }
+      };
+
+      const el = {
+        titleScreen: document.getElementById("titleScreen"),
+        gameScreen: document.getElementById("gameScreen"),
+        board: document.getElementById("board"),
+        score: document.getElementById("scoreValue"),
+        time: document.getElementById("timeValue"),
+        stage: document.getElementById("stageValue"),
+        combo: document.getElementById("comboValue"),
+        feverFill: document.getElementById("feverFill"),
+        feverText: document.getElementById("feverText"),
+        timeStat: document.getElementById("timeStat"),
+        message: document.getElementById("message"),
+        lumina: document.getElementById("gameLumina"),
+        hintCount: document.getElementById("hintCount"),
+        hintButton: document.getElementById("hintButton"),
+        pauseModal: document.getElementById("pauseModal"),
+        gameOverModal: document.getElementById("gameOverModal"),
+        titleSound: document.getElementById("titleSound"),
+        gameSound: document.getElementById("gameSound")
+      };
+
+      const state = {
+        difficulty: "normal",
+        size: 5,
+        board: [],
+        path: [],
+        start: 0,
+        goal: 0,
+        score: 0,
+        time: 120,
+        stage: 1,
+        cleared: 0,
+        moves: 0,
+        optimalMoves: 0,
+        combo: 1,
+        maxCombo: 1,
+        lastClearAt: 0,
+        fever: 0,
+        feverActive: false,
+        feverEndsAt: 0,
+        hints: 3,
+        playing: false,
+        paused: false,
+        resolving: false,
+        lastFrame: 0,
+        animationId: 0,
+        sound: true,
+        warned: false
+      };
+
+      let audioContext = null;
+
+      /* 安全なローカルストレージ操作 */
+      function storageGet(key, fallback) {
+        try {
+          const value = localStorage.getItem(key);
+          return value === null ? fallback : value;
+        } catch (_) {
+          return fallback;
+        }
+      }
+
+      function storageSet(key, value) {
+        try {
+          localStorage.setItem(key, String(value));
+        } catch (_) {}
+      }
+
+      function highScoreKey(difficulty) {
+        return "neonLinkHigh_" + difficulty;
+      }
+
+      function getHighScore(difficulty) {
+        return Number(storageGet(highScoreKey(difficulty), 0)) || 0;
+      }
+
+      function updateHighScores() {
+        document.getElementById("highEasy").textContent = getHighScore("easy").toLocaleString();
+        document.getElementById("highNormal").textContent = getHighScore("normal").toLocaleString();
+        document.getElementById("highHard").textContent = getHighScore("hard").toLocaleString();
+      }
+
+      /* Web Audio APIによる軽量効果音 */
+      function initAudio() {
+        if (!state.sound) return;
+        try {
+          if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          }
+          if (audioContext.state === "suspended") audioContext.resume();
+        } catch (_) {}
+      }
+
+      function tone(frequency, duration = .08, type = "sine", volume = .04, delay = 0) {
+        if (!state.sound) return;
+        initAudio();
+        if (!audioContext) return;
+
+        const start = audioContext.currentTime + delay;
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, start);
+        gain.gain.setValueAtTime(.0001, start);
+        gain.gain.exponentialRampToValueAtTime(volume, start + .012);
+        gain.gain.exponentialRampToValueAtTime(.0001, start + duration);
+
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(start);
+        oscillator.stop(start + duration + .02);
+      }
+
+      function playSound(name) {
+        if (!state.sound) return;
+        const sounds = {
+          button: () => tone(420, .045, "sine", .025),
+          rotate: () => {
+            tone(230, .045, "square", .018);
+            tone(330, .05, "sine", .018, .025);
+          },
+          connect: () => tone(690, .075, "sine", .032),
+          clear: () => {
+            [523, 659, 784, 1047].forEach((f, i) => tone(f, .18, "sine", .045, i * .07));
+          },
+          combo: () => {
+            tone(720, .08, "triangle", .045);
+            tone(980, .12, "triangle", .04, .07);
+          },
+          fever: () => {
+            [440, 554, 659, 880].forEach((f, i) => tone(f, .22, "sawtooth", .025, i * .055));
+          },
+          warning: () => tone(190, .12, "square", .035),
+          over: () => {
+            [420, 340, 250, 170].forEach((f, i) => tone(f, .25, "sawtooth", .025, i * .12));
+          }
+        };
+        if (sounds[name]) sounds[name]();
+      }
+
+      function toggleSound() {
+        state.sound = !state.sound;
+        storageSet("neonLinkSound", state.sound ? "1" : "0");
+        updateSoundButtons();
+        if (state.sound) {
+          initAudio();
+          playSound("button");
+        }
+      }
+
+      function updateSoundButtons() {
+        const icon = state.sound ? "🔊" : "🔇";
+        el.titleSound.textContent = icon;
+        el.gameSound.textContent = icon;
+        el.titleSound.setAttribute("aria-label", state.sound ? "サウンドをオフにする" : "サウンドをオンにする");
+        el.gameSound.setAttribute("aria-label", state.sound ? "サウンドをオフにする" : "サウンドをオンにする");
+      }
+
+      function showScreen(screen) {
+        el.titleScreen.classList.toggle("active", screen === "title");
+        el.gameScreen.classList.toggle("active", screen === "game");
+      }
+
+      function randomInt(max) {
+        return Math.floor(Math.random() * max);
+      }
+
+      function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = randomInt(i + 1);
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+      }
+
+      function rotateMask(mask, turns) {
+        let result = mask;
+        for (let i = 0; i < turns; i++) {
+          result = ((result << 1) & 15) | ((result >> 3) & 1);
+        }
+        return result;
+      }
+
+      function maskDirections(mask) {
+        return DIRS.filter(d => mask & d.bit);
+      }
+
+      function indexOfCell(r, c) {
+        return r * state.size + c;
+      }
+
+      function cellCoords(index) {
+        return { r: Math.floor(index / state.size), c: index % state.size };
+      }
+
+      /* 上下左右の接続を持つ、必ず解ける経路を生成 */
+      function generatePath(size) {
+        const startRow = randomInt(size);
+        const targetRow = randomInt(size);
+        const start = startRow * size;
+        const goal = targetRow * size + size - 1;
+        const visited = new Set([start]);
+        const path = [start];
+
+        function search(index) {
+          if (index === goal) return true;
+          const { r, c } = { r: Math.floor(index / size), c: index % size };
+
+          const candidates = shuffle(DIRS.map(d => ({
+            r: r + d.dr,
+            c: c + d.dc,
+            d
+          })).filter(n =>
+            n.r >= 0 && n.r < size &&
+            n.c >= 0 && n.c < size &&
+            !visited.has(n.r * size + n.c)
+          )).sort((a, b) => {
+            const da = Math.abs((size - 1) - a.c) + Math.abs(targetRow - a.r) + Math.random() * 2;
+            const db = Math.abs((size - 1) - b.c) + Math.abs(targetRow - b.r) + Math.random() * 2;
+            return da - db;
+          });
+
+          for (const next of candidates) {
+            const nextIndex = next.r * size + next.c;
+            visited.add(nextIndex);
+            path.push(nextIndex);
+            if (search(nextIndex)) return true;
+            path.pop();
+            visited.delete(nextIndex);
+          }
+          return false;
+        }
+
+        search(start);
+        return { path, start, goal };
+      }
+
+      function directionBetween(a, b) {
+        const ar = Math.floor(a / state.size);
+        const ac = a % state.size;
+        const br = Math.floor(b / state.size);
+        const bc = b % state.size;
+        return DIRS.find(d => ar + d.dr === br && ac + d.dc === bc);
+      }
+
+      function createStage() {
+        state.resolving = false;
+        state.moves = 0;
+        state.warned = false;
+        state.size = SETTINGS[state.difficulty].size;
+
+        const generated = generatePath(state.size);
+        state.path = generated.path;
+        state.start = generated.start;
+        state.goal = generated.goal;
+
+        const total = state.size * state.size;
+        state.board = Array.from({ length: total }, (_, index) => ({
+          index,
+          baseMask: 0,
+          rotation: 0,
+          correctRotation: 0,
+          onPath: false,
+          powered: false,
+          lockable: false,
+          lockedUntil: 0
+        }));
+
+        for (let i = 0; i < state.path.length; i++) {
+          const index = state.path[i];
+          let mask = 0;
+
+          if (i > 0) {
+            const fromPrevious = directionBetween(index, state.path[i - 1]);
+            mask |= fromPrevious.bit;
+          } else {
+            mask |= 8;
+          }
+
+          if (i < state.path.length - 1) {
+            const toNext = directionBetween(index, state.path[i + 1]);
+            mask |= toNext.bit;
+          } else {
+            mask |= 2;
+          }
+
+          state.board[index].baseMask = mask;
+          state.board[index].onPath = true;
+        }
+
+        /* 一定ステージ以降、分岐を正解経路へ追加 */
+        if (state.stage >= 3) {
+          const branchAttempts = Math.min(1 + Math.floor(state.stage / 3), 3);
+          const candidates = shuffle(state.path.slice(1, -1));
+
+          for (let count = 0; count < branchAttempts && candidates.length; count++) {
+            const index = candidates.pop();
+            const { r, c } = cellCoords(index);
+            const currentMask = state.board[index].baseMask;
+            const options = shuffle(DIRS.filter(d => {
+              const nr = r + d.dr;
+              const nc = c + d.dc;
+              if (nr < 0 || nr >= state.size || nc < 0 || nc >= state.size) return false;
+              const ni = indexOfCell(nr, nc);
+              return !(currentMask & d.bit) && !state.board[ni].onPath;
+            }));
+
+            if (options.length) {
+              const d = options[0];
+              const neighbor = indexOfCell(r + d.dr, c + d.dc);
+              state.board[index].baseMask |= d.bit;
+              state.board[neighbor].baseMask = d.opposite;
+              state.board[neighbor].onPath = true;
+            }
+          }
+        }
+
+        const decoyMasks = [1, 3, 5, 7, 9, 11, 13, 15];
+        state.board.forEach(cell => {
+          if (!cell.baseMask) {
+            cell.baseMask = decoyMasks[randomInt(decoyMasks.length)];
+          }
+
+          let rotation = randomInt(4);
+          if (cell.index === state.start || cell.index === state.goal) {
+            rotation = 0;
+          }
+
+          cell.rotation = rotation;
+          cell.correctRotation = 0;
+          cell.lockable =
+            state.stage >= 4 &&
+            cell.onPath &&
+            cell.index !== state.start &&
+            cell.index !== state.goal &&
+            Math.random() < (state.difficulty === "hard" ? .22 : .12);
+        });
+
+        state.optimalMoves = state.board
+          .filter(cell => cell.onPath)
+          .reduce((sum, cell) => sum + ((4 - cell.rotation) % 4), 0);
+
+        if (state.optimalMoves === 0) {
+          const candidates = state.board.filter(c =>
+            c.onPath && c.index !== state.start && c.index !== state.goal
+          );
+          if (candidates.length) {
+            candidates[0].rotation = 1;
+            state.optimalMoves = 3;
+          }
+        }
+
+        renderBoard();
+        updateConnections(false);
+        setMessage(state.stage === 1 ? "SからGまで光をつないでね！" : "新しい回路を解析中！");
+        setLuminaMood("");
+        updateHUD();
+      }
+
+      function renderBoard() {
+        el.board.innerHTML = "";
+        el.board.style.setProperty("--size", state.size);
+
+        const fragment = document.createDocumentFragment();
+
+        state.board.forEach(cell => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "tile";
+          button.dataset.index = cell.index;
+          button.setAttribute("role", "gridcell");
+          button.setAttribute("aria-label", "回路パネル。タップすると右へ90度回転");
+
+          if (cell.index === state.start) {
+            button.classList.add("start", "fixed");
+            button.setAttribute("aria-label", "スタートパネル");
+          }
+          if (cell.index === state.goal) {
+            button.classList.add("goal", "fixed");
+            button.setAttribute("aria-label", "ゴールパネル");
+          }
+
+          const pipe = document.createElement("span");
+          pipe.className = "pipe";
+          pipe.style.setProperty("--rotation", cell.rotation);
+
+          maskDirections(cell.baseMask).forEach(direction => {
+            const segment = document.createElement("i");
+            segment.className = "segment " + direction.name;
+            pipe.appendChild(segment);
+          });
+
+          const hub = document.createElement("i");
+          hub.className = "hub";
+          pipe.appendChild(hub);
+          button.appendChild(pipe);
+          fragment.appendChild(button);
+        });
+
+        el.board.appendChild(fragment);
+      }
+
+      function currentMask(cell) {
+        return rotateMask(cell.baseMask, cell.rotation);
+      }
+
+      /* スタートから相互接続されたパネルを幅優先探索 */
+      function findPoweredCells() {
+        const powered = new Set([state.start]);
+        const queue = [state.start];
+
+        while (queue.length) {
+          const index = queue.shift();
+          const cell = state.board[index];
+          const mask = currentMask(cell);
+          const { r, c } = cellCoords(index);
+
+          for (const d of DIRS) {
+            if (!(mask & d.bit)) continue;
+            const nr = r + d.dr;
+            const nc = c + d.dc;
+            if (nr < 0 || nr >= state.size || nc < 0 || nc >= state.size) continue;
+
+            const nextIndex = indexOfCell(nr, nc);
+            const nextCell = state.board[nextIndex];
+
+            if ((currentMask(nextCell) & d.opposite) && !powered.has(nextIndex)) {
+              powered.add(nextIndex);
+              queue.push(nextIndex);
+            }
+          }
+        }
+        return powered;
+      }
+
+      function updateConnections(playConnectionSound = true) {
+        const previouslyPowered = state.board.reduce((n, c) => n + (c.powered ? 1 : 0), 0);
+        const powered = findPoweredCells();
+
+        state.board.forEach(cell => {
+          cell.powered = powered.has(cell.index);
+          const tile = el.board.querySelector(`[data-index="${cell.index}"]`);
+          if (tile) tile.classList.toggle("powered", cell.powered);
+        });
+
+        if (playConnectionSound && powered.size > previouslyPowered) {
+          playSound("connect");
+          addFever(Math.min(5, powered.size - previouslyPowered));
+        }
+
+        if (powered.has(state.goal) && !state.resolving) {
+          completeStage();
+        }
+      }
+
+      function rotateTile(index) {
+        if (!state.playing || state.paused || state.resolving) return;
+
+        const cell = state.board[index];
+        if (!cell || index === state.start || index === state.goal) return;
+
+        const now = performance.now();
+        if (cell.lockedUntil > now) return;
+
+        cell.rotation = (cell.rotation + 1) % 4;
+        state.moves++;
+
+        const tile = el.board.querySelector(`[data-index="${index}"]`);
+        const pipe = tile.querySelector(".pipe");
+        pipe.style.setProperty("--rotation", cell.rotation);
+        tile.classList.remove("flash");
+        void tile.offsetWidth;
+        tile.classList.add("flash");
+
+        if (cell.lockable && Math.random() < .23) {
+          cell.lockedUntil = now + 1250;
+          tile.classList.add("locked");
+          setMessage("ロック発生！少し待ってね");
+          setTimeout(() => {
+            cell.lockedUntil = 0;
+            tile.classList.remove("locked");
+          }, 1250);
+        }
+
+        playSound("rotate");
+        updateConnections(true);
+      }
+
+      function useHint() {
+        if (!state.playing || state.paused || state.resolving || state.hints <= 0) return;
+
+        const candidates = state.board.filter(cell =>
+          cell.onPath &&
+          cell.index !== state.start &&
+          cell.index !== state.goal &&
+          cell.rotation !== cell.correctRotation
+        );
+
+        if (!candidates.length) {
+          setMessage("今の向きで光をたどってみて！");
+          return;
+        }
+
+        const cell = candidates[randomInt(candidates.length)];
+        cell.rotation = cell.correctRotation;
+        state.hints--;
+
+        const tile = el.board.querySelector(`[data-index="${cell.index}"]`);
+        tile.querySelector(".pipe").style.setProperty("--rotation", cell.rotation);
+        tile.classList.add("flash");
+
+        el.hintCount.textContent = state.hints;
+        el.hintButton.disabled = state.hints <= 0;
+        setMessage("このパネルを正しい向きにしたよ！");
+        playSound("connect");
+        updateConnections(false);
+      }
+
+      function addFever(amount) {
+        if (state.feverActive) return;
+        state.fever = Math.min(100, state.fever + amount);
+        if (state.fever >= 100) startFever();
+        updateHUD();
+      }
+
+      function startFever() {
+        state.feverActive = true;
+        state.feverEndsAt = performance.now() + 8000;
+        document.body.classList.add("fever");
+        setMessage("FEVER！スコアが2倍だよ！");
+        playSound("fever");
+      }
+
+      function endFever() {
+        state.feverActive = false;
+        state.fever = 0;
+        document.body.classList.remove("fever");
+      }
+
+      function completeStage() {
+        if (state.resolving || !state.playing) return;
+        state.resolving = true;
+
+        const now = performance.now();
+        const quickClear = state.lastClearAt && now - state.lastClearAt < 12000;
+        state.combo = quickClear ? Math.min(state.combo + 1, 9) : 1;
+        state.maxCombo = Math.max(state.maxCombo, state.combo);
+        state.lastClearAt = now;
+
+        const settings = SETTINGS[state.difficulty];
+        const efficient = state.moves <= state.optimalMoves + Math.max(2, Math.floor(state.path.length / 3));
+        const perfectBonus = efficient ? 750 : 0;
+        const timeBonus = Math.floor(state.time * 8);
+        const feverMultiplier = state.feverActive ? 2 : 1;
+        const base = 1000 + state.stage * 180;
+        const gained = Math.round(
+          (base + timeBonus + perfectBonus) *
+          state.combo *
+          settings.multiplier *
+          feverMultiplier
+        );
+
+        state.score += gained;
+        state.cleared++;
+        state.time = Math.min(120, state.time + settings.timeBonus);
+        addFever(24 + Math.min(16, state.combo * 3));
+
+        setLuminaMood("happy");
+        setMessage(efficient ? "パーフェクト接続！すごい！" : "回路完成！次へ進もう！");
+        showFloatingScore("+" + gained.toLocaleString());
+        showClearBanner(efficient ? "PERFECT!" : "LINK CLEAR!");
+        playSound(state.combo > 1 ? "combo" : "clear");
+        updateHUD();
+
+        setTimeout(() => {
+          if (!state.playing) return;
+          state.stage++;
+          createStage();
+        }, 1050);
+      }
+
+      function showFloatingScore(text) {
+        const node = document.createElement("div");
+        node.className = "score-float";
+        node.textContent = text;
+        document.body.appendChild(node);
+        setTimeout(() => node.remove(), 950);
+      }
+
+      function showClearBanner(text) {
+        const node = document.createElement("div");
+        node.className = "clear-banner";
+        node.textContent = text;
+        document.body.appendChild(node);
+        setTimeout(() => node.remove(), 1100);
+      }
+
+      function setMessage(text) {
+        el.message.textContent = text;
+      }
+
+      function setLuminaMood(mood) {
+        el.lumina.classList.remove("happy", "worried");
+        if (mood) el.lumina.classList.add(mood);
+      }
+
+      function updateHUD() {
+        el.score.textContent = Math.floor(state.score).toLocaleString();
+        el.time.textContent = Math.max(0, state.time).toFixed(1);
+        el.stage.textContent = state.stage;
+        el.combo.textContent = "×" + state.combo;
+        el.hintCount.textContent = state.hints;
+        el.hintButton.disabled = state.hints <= 0;
+
+        const displayFever = state.feverActive
+          ? Math.max(0, Math.ceil((state.feverEndsAt - performance.now()) / 1000))
+          : Math.round(state.fever);
+
+        el.feverFill.style.width = state.feverActive ? "100%" : state.fever + "%";
+        el.feverText.textContent = state.feverActive ? displayFever + "s" : displayFever + "%";
+
+        const danger = state.time <= 10;
+        el.timeStat.classList.toggle("danger-time", danger);
+        setLuminaMood(danger ? "worried" : (state.resolving ? "happy" : ""));
+      }
+
+      function gameLoop(timestamp) {
+        if (!state.playing) return;
+
+        if (!state.lastFrame) state.lastFrame = timestamp;
+        const delta = Math.min(100, timestamp - state.lastFrame);
+        state.lastFrame = timestamp;
+
+        if (!state.paused && !state.resolving) {
+          state.time -= delta / 1000;
+
+          if (state.feverActive && timestamp >= state.feverEndsAt) {
+            endFever();
+            setMessage("フィーバー終了。次のゲージをためよう！");
+          }
+
+          if (state.time <= 10 && !state.warned) {
+            state.warned = true;
+            setMessage("残り10秒！急いで！");
+            playSound("warning");
+          }
+
+          if (state.time <= 0) {
+            state.time = 0;
+            updateHUD();
+            gameOver();
+            return;
+          }
+
+          updateHUD();
+        }
+
+        state.animationId = requestAnimationFrame(gameLoop);
+      }
+
+      function startGame() {
+        initAudio();
+        playSound("button");
+        cancelAnimationFrame(state.animationId);
+
+        state.score = 0;
+        state.time = 120;
+        state.stage = 1;
+        state.cleared = 0;
+        state.combo = 1;
+        state.maxCombo = 1;
+        state.lastClearAt = 0;
+        state.fever = 0;
+        state.feverActive = false;
+        state.feverEndsAt = 0;
+        state.hints = 3;
+        state.playing = true;
+        state.paused = false;
+        state.resolving = false;
+        state.lastFrame = 0;
+        state.warned = false;
+
+        document.body.classList.remove("fever");
+        el.pauseModal.classList.remove("open");
+        el.gameOverModal.classList.remove("open");
+        showScreen("game");
+        createStage();
+
+        try {
+          if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock("portrait").catch(() => {});
+          }
+        } catch (_) {}
+
+        state.animationId = requestAnimationFrame(gameLoop);
+      }
+
+      function pauseGame() {
+        if (!state.playing || state.resolving) return;
+        state.paused = true;
+        el.pauseModal.classList.add("open");
+        playSound("button");
+      }
+
+      function resumeGame() {
+        state.paused = false;
+        state.lastFrame = performance.now();
+        el.pauseModal.classList.remove("open");
+        playSound("button");
+      }
+
+      function returnToTitle() {
+        state.playing = false;
+        state.paused = false;
+        cancelAnimationFrame(state.animationId);
+        document.body.classList.remove("fever");
+        el.pauseModal.classList.remove("open");
+        el.gameOverModal.classList.remove("open");
+        showScreen("title");
+        updateHighScores();
+        playSound("button");
+      }
+
+      function gameOver() {
+        state.playing = false;
+        state.resolving = true;
+        cancelAnimationFrame(state.animationId);
+        document.body.classList.remove("fever");
+        playSound("over");
+
+        const oldHigh = getHighScore(state.difficulty);
+        const high = Math.max(oldHigh, Math.floor(state.score));
+        if (high > oldHigh) storageSet(highScoreKey(state.difficulty), high);
+
+        const rank =
+          state.score >= 60000 ? "S+" :
+          state.score >= 35000 ? "S" :
+          state.score >= 20000 ? "A" :
+          state.score >= 10000 ? "B" :
+          state.score >= 4000 ? "C" : "D";
+
+        document.getElementById("rankValue").textContent = rank;
+        document.getElementById("finalScore").textContent = Math.floor(state.score).toLocaleString();
+        document.getElementById("finalHigh").textContent = high.toLocaleString();
+        document.getElementById("finalStages").textContent = state.cleared;
+        document.getElementById("finalCombo").textContent = state.maxCombo;
+        document.getElementById("finalDifficulty").textContent = state.difficulty.toUpperCase();
+
+        el.gameOverModal.classList.add("open");
+        updateHighScores();
+      }
+
+      /* イベント登録 */
+      document.querySelectorAll("[data-difficulty]").forEach(button => {
+        button.addEventListener("click", () => {
+          initAudio();
+          playSound("button");
+          state.difficulty = button.dataset.difficulty;
+          document.querySelectorAll("[data-difficulty]").forEach(b => {
+            b.classList.toggle("selected", b === button);
+          });
+        });
+      });
+
+      el.board.addEventListener("click", event => {
+        const tile = event.target.closest(".tile");
+        if (!tile) return;
+        rotateTile(Number(tile.dataset.index));
+      });
+
+      el.board.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        const tile = event.target.closest(".tile");
+        if (!tile) return;
+        event.preventDefault();
+        rotateTile(Number(tile.dataset.index));
+      });
+
+      document.getElementById("startButton").addEventListener("click", startGame);
+      document.getElementById("hintButton").addEventListener("click", useHint);
+      document.getElementById("pauseButton").addEventListener("click", pauseGame);
+      document.getElementById("resumeButton").addEventListener("click", resumeGame);
+      document.getElementById("restartButton").addEventListener("click", startGame);
+      document.getElementById("pauseTitleButton").addEventListener("click", returnToTitle);
+      document.getElementById("retryButton").addEventListener("click", startGame);
+      document.getElementById("overTitleButton").addEventListener("click", returnToTitle);
+      el.titleSound.addEventListener("click", toggleSound);
+      el.gameSound.addEventListener("click", toggleSound);
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden && state.playing && !state.paused && !state.resolving) {
+          pauseGame();
+        }
+      });
+
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && state.playing) {
+          if (state.paused) resumeGame();
+          else pauseGame();
+        }
+      });
+
+      document.addEventListener("gesturestart", event => event.preventDefault(), { passive: false });
+
+      let lastTouchEnd = 0;
+      document.addEventListener("touchend", event => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) event.preventDefault();
+        lastTouchEnd = now;
+      }, { passive: false });
+
+      state.sound = storageGet("neonLinkSound", "1") !== "0";
+      updateSoundButtons();
+      updateHighScores();
+    })();
+  </script>
+</body>
+</html>

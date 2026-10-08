@@ -1,0 +1,2093 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#ff8fbd">
+<title>キャンディホップアドベンチャー</title>
+<style>
+:root{
+  --pink:#ff79ad;
+  --pink-dark:#e95291;
+  --blue:#70d8f5;
+  --cream:#fff4ce;
+  --brown:#70485b;
+  --white:#fff;
+}
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+html,body{
+  width:100%;
+  height:100%;
+  margin:0;
+  overflow:hidden;
+  background:#bceeff;
+  color:var(--brown);
+  font-family:"Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;
+  touch-action:none;
+  overscroll-behavior:none;
+}
+button,select{
+  font:inherit;
+}
+#app{
+  position:relative;
+  width:100%;
+  height:100%;
+  min-height:100dvh;
+  overflow:hidden;
+}
+canvas{
+  display:block;
+  width:100%;
+  height:100%;
+  background:#bceeff;
+}
+
+/* HUD */
+#hud{
+  position:absolute;
+  z-index:5;
+  top:max(8px,env(safe-area-inset-top));
+  left:8px;
+  right:8px;
+  display:none;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:6px;
+  pointer-events:none;
+}
+.hud-item{
+  min-width:0;
+  padding:7px 5px;
+  border:2px solid rgba(255,255,255,.9);
+  border-radius:15px;
+  background:rgba(255,255,255,.82);
+  box-shadow:0 4px 0 rgba(112,72,91,.16);
+  text-align:center;
+  font-size:clamp(10px,2.7vw,14px);
+  font-weight:900;
+  line-height:1.15;
+}
+.hud-value{
+  display:block;
+  margin-top:2px;
+  color:#e95291;
+  font-size:clamp(13px,3.5vw,20px);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#feverPanel{
+  position:absolute;
+  z-index:5;
+  top:max(68px,calc(env(safe-area-inset-top) + 68px));
+  left:12px;
+  right:12px;
+  display:none;
+  align-items:center;
+  gap:7px;
+  color:#70485b;
+  font-size:12px;
+  font-weight:900;
+  pointer-events:none;
+}
+#feverTrack{
+  flex:1;
+  height:15px;
+  overflow:hidden;
+  border:2px solid #fff;
+  border-radius:999px;
+  background:rgba(255,255,255,.7);
+  box-shadow:0 3px 0 rgba(112,72,91,.15);
+}
+#feverBar{
+  width:0;
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg,#ff75aa,#ffd459,#76e58d,#70d8f5,#b78cff);
+  transition:width .15s linear;
+}
+#statusMessage{
+  position:absolute;
+  z-index:7;
+  top:24%;
+  left:50%;
+  width:min(90%,620px);
+  transform:translate(-50%,-50%) scale(.8);
+  color:#fff;
+  font-size:clamp(24px,7vw,54px);
+  font-weight:1000;
+  text-align:center;
+  text-shadow:
+    0 4px 0 #e95291,
+    0 0 14px rgba(255,255,255,.9);
+  opacity:0;
+  pointer-events:none;
+}
+#statusMessage.show{
+  animation:messagePop 1.25s ease-out;
+}
+@keyframes messagePop{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.45) rotate(-5deg)}
+  20%{opacity:1;transform:translate(-50%,-50%) scale(1.12) rotate(2deg)}
+  72%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-65%) scale(.9)}
+}
+
+/* 画面共通 */
+.screen{
+  position:absolute;
+  z-index:10;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:
+    max(14px,env(safe-area-inset-top))
+    max(14px,env(safe-area-inset-right))
+    max(14px,env(safe-area-inset-bottom))
+    max(14px,env(safe-area-inset-left));
+  overflow:auto;
+  background:
+    radial-gradient(circle at 20% 12%,rgba(255,255,255,.9) 0 6%,transparent 6.5%),
+    radial-gradient(circle at 85% 21%,rgba(255,255,255,.7) 0 4%,transparent 4.5%),
+    linear-gradient(#8ee5ff,#fff1cb);
+}
+.screen.hidden{
+  display:none;
+}
+.card{
+  width:min(92vw,640px);
+  margin:auto;
+  padding:clamp(16px,4vw,28px);
+  border:4px solid #fff;
+  border-radius:30px;
+  background:rgba(255,250,237,.94);
+  box-shadow:
+    0 10px 0 rgba(218,102,151,.26),
+    0 16px 35px rgba(112,72,91,.18);
+  text-align:center;
+}
+.title{
+  margin:0;
+  color:#ff64a1;
+  font-size:clamp(29px,8vw,56px);
+  font-weight:1000;
+  line-height:1.02;
+  letter-spacing:.02em;
+  text-shadow:
+    0 4px 0 #fff,
+    0 7px 0 #70d8f5;
+}
+.subtitle{
+  margin:12px 0;
+  font-size:clamp(14px,3.5vw,19px);
+  font-weight:800;
+}
+.character-preview{
+  position:relative;
+  width:112px;
+  height:104px;
+  margin:8px auto 2px;
+  animation:previewHop 1.4s ease-in-out infinite;
+}
+@keyframes previewHop{
+  0%,100%{transform:translateY(0) rotate(-2deg)}
+  50%{transform:translateY(-10px) rotate(2deg)}
+}
+.ear{
+  position:absolute;
+  top:4px;
+  width:33px;
+  height:67px;
+  border:4px solid #e5c8d0;
+  border-radius:60% 60% 45% 45%;
+  background:#fff;
+}
+.ear:after{
+  content:"";
+  position:absolute;
+  inset:10px 8px;
+  border-radius:inherit;
+  background:#ffb7d1;
+}
+.ear.left{left:17px;transform:rotate(-15deg)}
+.ear.right{right:17px;transform:rotate(15deg)}
+.mochi{
+  position:absolute;
+  left:13px;
+  bottom:0;
+  width:86px;
+  height:72px;
+  border:4px solid #e5c8d0;
+  border-radius:48% 48% 44% 44%;
+  background:#fff;
+  box-shadow:inset 0 -8px 0 #fff1f5;
+}
+.eye{
+  position:absolute;
+  top:28px;
+  width:7px;
+  height:10px;
+  border-radius:50%;
+  background:#70485b;
+}
+.eye.left{left:24px}
+.eye.right{right:24px}
+.cheek{
+  position:absolute;
+  top:41px;
+  width:15px;
+  height:8px;
+  border-radius:50%;
+  background:#ffafc7;
+}
+.cheek.left{left:9px}
+.cheek.right{right:9px}
+.mouth{
+  position:absolute;
+  top:39px;
+  left:37px;
+  width:10px;
+  height:7px;
+  border-bottom:3px solid #70485b;
+  border-radius:50%;
+}
+.controls{
+  margin:14px 0;
+  padding:12px;
+  border-radius:20px;
+  background:#e9faff;
+  font-size:clamp(12px,3vw,15px);
+  font-weight:800;
+  line-height:1.55;
+}
+.difficulty-title{
+  margin:14px 0 8px;
+  font-weight:1000;
+}
+.difficulty-group{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+.difficulty-group input{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+.difficulty-group label{
+  display:flex;
+  min-height:58px;
+  align-items:center;
+  justify-content:center;
+  padding:8px 4px;
+  border:3px solid #ffd1e2;
+  border-radius:17px;
+  background:#fff;
+  font-size:clamp(12px,3vw,16px);
+  font-weight:1000;
+  cursor:pointer;
+  transition:.15s;
+}
+.difficulty-group input:checked + label{
+  color:#fff;
+  border-color:#fff;
+  background:linear-gradient(135deg,#ff79ad,#70d8f5);
+  box-shadow:0 5px 0 #d86299;
+  transform:translateY(-2px);
+}
+.primary-btn,.secondary-btn{
+  width:100%;
+  min-height:58px;
+  margin-top:16px;
+  padding:12px 18px;
+  border:0;
+  border-radius:999px;
+  color:#fff;
+  font-weight:1000;
+  font-size:clamp(18px,4.5vw,24px);
+  cursor:pointer;
+  box-shadow:0 7px 0 #d84f89;
+  transition:transform .08s,box-shadow .08s;
+}
+.primary-btn{
+  background:linear-gradient(135deg,#ff76aa,#ff9d63);
+}
+.secondary-btn{
+  background:linear-gradient(135deg,#62cce9,#8977e8);
+  box-shadow:0 7px 0 #5570bd;
+}
+.primary-btn:active,.secondary-btn:active{
+  transform:translateY(5px);
+  box-shadow:0 2px 0 #d84f89;
+}
+.sound-row{
+  margin-top:12px;
+  font-size:13px;
+  font-weight:800;
+}
+#soundToggle{
+  min-height:42px;
+  padding:7px 16px;
+  border:0;
+  border-radius:999px;
+  background:#fff;
+  color:#70485b;
+  font-weight:900;
+  box-shadow:0 4px 0 #d9c5cd;
+}
+.result-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:9px;
+  margin:18px 0 8px;
+}
+.result-box{
+  padding:12px 6px;
+  border-radius:17px;
+  background:#fff;
+  box-shadow:0 4px 0 #ead3dc;
+  font-weight:900;
+}
+.result-box strong{
+  display:block;
+  margin-top:4px;
+  color:#e95291;
+  font-size:clamp(21px,6vw,32px);
+}
+#endReason{
+  font-size:17px;
+  font-weight:900;
+}
+.small-note{
+  margin:12px 0 0;
+  font-size:12px;
+  opacity:.8;
+}
+
+/* スマートフォン用操作ガイド */
+#touchGuide{
+  position:absolute;
+  z-index:4;
+  right:0;
+  bottom:max(12px,env(safe-area-inset-bottom));
+  left:0;
+  display:none;
+  justify-content:space-between;
+  padding:0 18px;
+  pointer-events:none;
+}
+.touch-label{
+  padding:8px 12px;
+  border:2px solid rgba(255,255,255,.8);
+  border-radius:999px;
+  color:#70485b;
+  background:rgba(255,255,255,.55);
+  font-size:11px;
+  font-weight:900;
+  opacity:.72;
+}
+#rotateTip{
+  position:absolute;
+  z-index:6;
+  right:10px;
+  bottom:max(8px,env(safe-area-inset-bottom));
+  display:none;
+  padding:6px 10px;
+  border-radius:999px;
+  color:#70485b;
+  background:rgba(255,255,255,.75);
+  font-size:10px;
+  font-weight:900;
+  pointer-events:none;
+}
+@media (orientation:landscape) and (max-height:500px){
+  .card{width:min(86vw,760px);padding:12px 22px}
+  .title{font-size:34px}
+  .character-preview{display:none}
+  .subtitle{margin:7px 0}
+  .controls{margin:8px 0;padding:7px}
+  .difficulty-title{margin:7px 0 5px}
+  .difficulty-group label{min-height:43px}
+  .primary-btn,.secondary-btn{min-height:45px;margin-top:9px}
+  .sound-row{margin-top:7px}
+  #hud{grid-template-columns:repeat(5,minmax(80px,1fr))}
+  #feverPanel{top:61px}
+}
+@media (max-width:420px){
+  #hud{gap:3px;left:4px;right:4px}
+  .hud-item{padding:5px 2px;border-radius:11px}
+  #feverPanel{left:7px;right:7px}
+}
+
+/* ゲーム一覧へのリンク */
+.hub-back{display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;min-height:44px;font-family:inherit;font-weight:900;cursor:pointer;touch-action:manipulation}.hub-back:focus-visible{outline:3px solid #ffdc58;outline-offset:4px}.hub-back{font-size:16px;min-height:44px;margin-top:12px;padding:10px 16px}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="gameCanvas" aria-label="キャンディホップアドベンチャーのゲーム画面"></canvas>
+
+  <div id="hud">
+    <div class="hud-item">スコア<span class="hud-value" id="scoreValue">0</span></div>
+    <div class="hud-item">ベスト<span class="hud-value" id="highScoreValue">0</span></div>
+    <div class="hud-item">ライフ<span class="hud-value" id="lifeValue">♥♥♥</span></div>
+    <div class="hud-item">残り時間<span class="hud-value" id="timeValue">120</span></div>
+    <div class="hud-item">難易度<span class="hud-value" id="difficultyValue">ふつう</span></div>
+  </div>
+
+  <div id="feverPanel">
+    <span>FEVER</span>
+    <div id="feverTrack"><div id="feverBar"></div></div>
+  </div>
+
+  <div id="statusMessage"></div>
+
+  <div id="touchGuide">
+    <div class="touch-label">左タップ：ジャンプ</div>
+    <div class="touch-label">右長押し：ハイジャンプ</div>
+  </div>
+
+  <div id="rotateTip">端末の向きはどちらでもOK！</div>
+
+  <section id="startScreen" class="screen">
+    <div class="card">
+      <h1 class="title">キャンディホップ<br>アドベンチャー</h1>
+
+      <div class="character-preview" aria-hidden="true">
+        <div class="ear left"></div>
+        <div class="ear right"></div>
+        <div class="mochi">
+          <span class="eye left"></span>
+          <span class="eye right"></span>
+          <span class="cheek left"></span>
+          <span class="cheek right"></span>
+          <span class="mouth"></span>
+        </div>
+      </div>
+
+      <p class="subtitle">モチぴょんとお菓子の国を大冒険！</p>
+
+      <div class="controls">
+        左側をタップするとジャンプ！<br>
+        右側を長押しすると高くジャンプ！<br>
+        PCではスペースキーを押してください。
+      </div>
+
+      <div class="difficulty-title">難易度を選んでね</div>
+      <div class="difficulty-group">
+        <input type="radio" id="easy" name="difficulty" value="easy">
+        <label for="easy">かんたん</label>
+
+        <input type="radio" id="normal" name="difficulty" value="normal" checked>
+        <label for="normal">ふつう</label>
+
+        <input type="radio" id="hard" name="difficulty" value="hard">
+        <label for="hard">むずかしい</label>
+      </div>
+
+      <button id="startButton" class="primary-btn" type="button">ゲームスタート！</button>
+
+      <a class="hub-back secondary-btn" href="index.html" aria-label="ゲーム一覧にもどる">← もどる</a>
+      <div class="sound-row">
+        <button id="soundToggle" type="button">🔊 サウンド ON</button>
+      </div>
+      <p class="small-note">120秒間でキャンディをたくさん集めよう！</p>
+    </div>
+  </section>
+
+  <section id="gameOverScreen" class="screen hidden">
+    <div class="card">
+      <h2 class="title">ゲーム終了！</h2>
+      <p id="endReason">おつかれさま！</p>
+
+      <div class="result-grid">
+        <div class="result-box">最終スコア<strong id="resultScore">0</strong></div>
+        <div class="result-box">ハイスコア<strong id="resultHighScore">0</strong></div>
+        <div class="result-box">キャンディ<strong id="resultCandy">0個</strong></div>
+        <div class="result-box">プレイ時間<strong id="resultTime">0秒</strong></div>
+      </div>
+
+      <button id="retryButton" class="primary-btn" type="button">もう一度あそぶ</button>
+      <button id="titleButton" class="secondary-btn" type="button">タイトルへ戻る</button>
+<a class="hub-back secondary-btn" href="index.html" aria-label="ゲーム一覧にもどる">← もどる</a>
+    </div>
+  </section>
+</div>
+
+<script>
+"use strict";
+
+(() => {
+  // ------------------------------------------------------------
+  // DOMとCanvasの準備
+  // ------------------------------------------------------------
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d", { alpha: false });
+
+  const startScreen = document.getElementById("startScreen");
+  const gameOverScreen = document.getElementById("gameOverScreen");
+  const startButton = document.getElementById("startButton");
+  const retryButton = document.getElementById("retryButton");
+  const titleButton = document.getElementById("titleButton");
+  const soundToggle = document.getElementById("soundToggle");
+  const hud = document.getElementById("hud");
+  const feverPanel = document.getElementById("feverPanel");
+  const feverBar = document.getElementById("feverBar");
+  const touchGuide = document.getElementById("touchGuide");
+  const rotateTip = document.getElementById("rotateTip");
+  const statusMessage = document.getElementById("statusMessage");
+
+  const scoreValue = document.getElementById("scoreValue");
+  const highScoreValue = document.getElementById("highScoreValue");
+  const lifeValue = document.getElementById("lifeValue");
+  const timeValue = document.getElementById("timeValue");
+  const difficultyValue = document.getElementById("difficultyValue");
+
+  const resultScore = document.getElementById("resultScore");
+  const resultHighScore = document.getElementById("resultHighScore");
+  const resultCandy = document.getElementById("resultCandy");
+  const resultTime = document.getElementById("resultTime");
+  const endReason = document.getElementById("endReason");
+
+  const GAME_DURATION = 120;
+  const FEVER_TARGET = 10;
+  const STORAGE_KEY = "candyHopAdventureHighScore";
+
+  let width = 0;
+  let height = 0;
+  let dpr = 1;
+  let groundY = 0;
+
+  let gameState = "title";
+  let animationId = 0;
+  let previousTime = 0;
+  let elapsed = 0;
+  let remainingTime = GAME_DURATION;
+  let score = 0;
+  let highScore = loadHighScore();
+  let candyCount = 0;
+  let lives = 3;
+  let worldDistance = 0;
+  let spawnTimer = 0;
+  let bonusCheckTimer = 0;
+  let bonusTimer = 0;
+  let feverTimer = 0;
+  let feverGauge = 0;
+  let invincibleTimer = 0;
+  let damageTimer = 0;
+  let screenShake = 0;
+  let difficultyKey = "normal";
+  let settings = null;
+  let touchStartTime = 0;
+  let touchSide = "";
+  let spaceDownTime = 0;
+  let soundEnabled = true;
+  let audioContext = null;
+
+  let obstacles = [];
+  let items = [];
+  let particles = [];
+  let clouds = [];
+  let decorativeStars = [];
+
+  // ------------------------------------------------------------
+  // 難易度設定
+  // ------------------------------------------------------------
+  const difficultySettings = {
+    easy: {
+      label: "かんたん",
+      speed: 230,
+      obstacleRate: 0.65,
+      candyRate: 1.35,
+      scoreMultiplier: 1,
+      gapMin: 1.25,
+      gapMax: 2.05
+    },
+    normal: {
+      label: "ふつう",
+      speed: 285,
+      obstacleRate: 1,
+      candyRate: 1,
+      scoreMultiplier: 1.5,
+      gapMin: 1,
+      gapMax: 1.75
+    },
+    hard: {
+      label: "むずかしい",
+      speed: 350,
+      obstacleRate: 1.38,
+      candyRate: 0.86,
+      scoreMultiplier: 2,
+      gapMin: 0.76,
+      gapMax: 1.35
+    }
+  };
+
+  // ------------------------------------------------------------
+  // プレイヤー
+  // ------------------------------------------------------------
+  const player = {
+    x: 90,
+    y: 0,
+    width: 62,
+    height: 66,
+    vy: 0,
+    grounded: true,
+    rotation: 0,
+    squash: 0,
+    blink: 0,
+    jumpPower: 690
+  };
+
+  // ------------------------------------------------------------
+  // 画面サイズへの対応
+  // ------------------------------------------------------------
+  function resizeCanvas() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    width = Math.max(320, window.innerWidth);
+    height = Math.max(320, window.innerHeight);
+
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
+    canvas.style.width = width + "px";
+    canvas.style.height = height + "px";
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    groundY = height * (height < 500 ? 0.78 : 0.8);
+
+    player.x = Math.max(58, Math.min(width * 0.18, 145));
+
+    if (gameState !== "playing" || player.grounded) {
+      player.y = groundY - player.height;
+    }
+
+    createBackgroundObjects();
+  }
+
+  function createBackgroundObjects() {
+    clouds = [];
+    decorativeStars = [];
+
+    const cloudCount = Math.max(5, Math.ceil(width / 180));
+    for (let i = 0; i < cloudCount; i++) {
+      clouds.push({
+        x: Math.random() * width,
+        y: 80 + Math.random() * Math.max(60, groundY * 0.35),
+        scale: 0.55 + Math.random() * 0.8,
+        speed: 8 + Math.random() * 10
+      });
+    }
+
+    for (let i = 0; i < 18; i++) {
+      decorativeStars.push({
+        x: Math.random() * width,
+        y: Math.random() * groundY * 0.72,
+        r: 1 + Math.random() * 2,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  window.addEventListener("resize", resizeCanvas, { passive: true });
+  window.addEventListener("orientationchange", () => {
+    rotateTip.style.display = gameState === "playing" ? "block" : "none";
+    setTimeout(() => {
+      rotateTip.style.display = "none";
+      resizeCanvas();
+    }, 900);
+  }, { passive: true });
+
+  // ------------------------------------------------------------
+  // LocalStorage
+  // ------------------------------------------------------------
+  function loadHighScore() {
+    try {
+      const value = Number(localStorage.getItem(STORAGE_KEY));
+      return Number.isFinite(value) ? value : 0;
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  function saveHighScore() {
+    try {
+      localStorage.setItem(STORAGE_KEY, String(highScore));
+    } catch (error) {
+      // LocalStorageが無効でもゲームは継続する
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Web Audio APIによる効果音
+  // ------------------------------------------------------------
+  function ensureAudio() {
+    if (!soundEnabled) return null;
+
+    if (!audioContext) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return null;
+      audioContext = new AudioContextClass();
+    }
+
+    if (audioContext.state === "suspended") {
+      audioContext.resume();
+    }
+
+    return audioContext;
+  }
+
+  function playTone(frequency, duration, type = "sine", volume = 0.1, slideTo = null, delay = 0) {
+    const ac = ensureAudio();
+    if (!ac) return;
+
+    const start = ac.currentTime + delay;
+    const oscillator = ac.createOscillator();
+    const gain = ac.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, start);
+
+    if (slideTo !== null) {
+      oscillator.frequency.exponentialRampToValueAtTime(
+        Math.max(20, slideTo),
+        start + duration
+      );
+    }
+
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+    oscillator.connect(gain);
+    gain.connect(ac.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.03);
+  }
+
+  function playSound(name) {
+    if (!soundEnabled) return;
+
+    switch (name) {
+      case "jump":
+        playTone(310, 0.13, "sine", 0.11, 620);
+        break;
+      case "candy":
+        playTone(660, 0.09, "sine", 0.1, 880);
+        playTone(880, 0.1, "sine", 0.08, 1100, 0.07);
+        break;
+      case "rainbow":
+        [523, 659, 784, 1047].forEach((note, i) => {
+          playTone(note, 0.16, "triangle", 0.08, note * 1.08, i * 0.06);
+        });
+        break;
+      case "star":
+        [784, 988, 1175].forEach((note, i) => {
+          playTone(note, 0.2, "sine", 0.07, note * 1.15, i * 0.07);
+        });
+        break;
+      case "damage":
+        playTone(180, 0.3, "sawtooth", 0.12, 70);
+        break;
+      case "fever":
+        [392, 523, 659, 784, 1047].forEach((note, i) => {
+          playTone(note, 0.24, "square", 0.055, note * 1.05, i * 0.07);
+        });
+        break;
+      case "bonus":
+        [659, 784, 988].forEach((note, i) => {
+          playTone(note, 0.2, "triangle", 0.07, note * 1.1, i * 0.08);
+        });
+        break;
+      case "gameover":
+        playTone(392, 0.25, "triangle", 0.09, 330);
+        playTone(330, 0.25, "triangle", 0.09, 262, 0.24);
+        playTone(262, 0.45, "triangle", 0.09, 130, 0.48);
+        break;
+    }
+  }
+
+  soundToggle.addEventListener("click", () => {
+    soundEnabled = !soundEnabled;
+    soundToggle.textContent = soundEnabled
+      ? "🔊 サウンド ON"
+      : "🔇 サウンド OFF";
+
+    if (soundEnabled) {
+      ensureAudio();
+      playTone(660, 0.1, "sine", 0.07, 880);
+    }
+  });
+
+  // ------------------------------------------------------------
+  // ゲーム開始・終了
+  // ------------------------------------------------------------
+  function getSelectedDifficulty() {
+    const selected = document.querySelector('input[name="difficulty"\]:checked');
+    return selected ? selected.value : "normal";
+  }
+
+  function resetGame() {
+    difficultyKey = getSelectedDifficulty();
+    settings = difficultySettings[difficultyKey];
+
+    score = 0;
+    candyCount = 0;
+    lives = 3;
+    elapsed = 0;
+    remainingTime = GAME_DURATION;
+    worldDistance = 0;
+    spawnTimer = 0.7;
+    bonusCheckTimer = 10;
+    bonusTimer = 0;
+    feverTimer = 0;
+    feverGauge = 0;
+    invincibleTimer = 0;
+    damageTimer = 0;
+    screenShake = 0;
+
+    obstacles.length = 0;
+    items.length = 0;
+    particles.length = 0;
+
+    player.y = groundY - player.height;
+    player.vy = 0;
+    player.grounded = true;
+    player.rotation = 0;
+    player.squash = 0;
+    player.blink = 0;
+
+    updateHud();
+  }
+
+  function startGame() {
+    ensureAudio();
+    cancelAnimationFrame(animationId);
+
+    resetGame();
+    gameState = "playing";
+    startScreen.classList.add("hidden");
+    gameOverScreen.classList.add("hidden");
+    hud.style.display = "grid";
+    feverPanel.style.display = "flex";
+    touchGuide.style.display = "flex";
+
+    previousTime = performance.now();
+    animationId = requestAnimationFrame(gameLoop);
+  }
+
+  function endGame(reason) {
+    if (gameState !== "playing") return;
+
+    gameState = "gameover";
+    cancelAnimationFrame(animationId);
+    playSound("gameover");
+
+    highScore = Math.max(highScore, Math.floor(score));
+    saveHighScore();
+
+    hud.style.display = "none";
+    feverPanel.style.display = "none";
+    touchGuide.style.display = "none";
+
+    resultScore.textContent = Math.floor(score).toLocaleString("ja-JP");
+    resultHighScore.textContent = highScore.toLocaleString("ja-JP");
+    resultCandy.textContent = candyCount + "個";
+    resultTime.textContent = Math.floor(elapsed) + "秒";
+    endReason.textContent = reason;
+
+    gameOverScreen.classList.remove("hidden");
+  }
+
+  startButton.addEventListener("click", startGame);
+  retryButton.addEventListener("click", startGame);
+
+  titleButton.addEventListener("click", () => {
+    gameState = "title";
+    gameOverScreen.classList.add("hidden");
+    startScreen.classList.remove("hidden");
+    drawTitleBackground();
+  });
+
+  // ------------------------------------------------------------
+  // 入力処理
+  // ------------------------------------------------------------
+  function jump(highJump = false) {
+    if (gameState !== "playing") return;
+    if (!player.grounded) return;
+
+    player.vy = highJump ? -player.jumpPower * 1.22 : -player.jumpPower;
+    player.grounded = false;
+    player.squash = 0.24;
+    playSound("jump");
+
+    createDust(player.x + player.width * 0.5, groundY - 3, 8, "#ffffff");
+  }
+
+  function handlePointerDown(event) {
+    if (gameState !== "playing") return;
+
+    event.preventDefault();
+    touchStartTime = performance.now();
+    touchSide = event.clientX < width / 2 ? "left" : "right";
+
+    if (touchSide === "left") {
+      jump(false);
+    }
+
+    try {
+      canvas.setPointerCapture(event.pointerId);
+    } catch (error) {
+      // Pointer Capture未対応の環境では何もしない
+    }
+  }
+
+  function handlePointerUp(event) {
+    if (gameState !== "playing") return;
+
+    event.preventDefault();
+
+    if (touchSide === "right") {
+      const heldTime = performance.now() - touchStartTime;
+      jump(heldTime >= 180);
+    }
+
+    touchSide = "";
+  }
+
+  canvas.addEventListener("pointerdown", handlePointerDown);
+  canvas.addEventListener("pointerup", handlePointerUp);
+  canvas.addEventListener("pointercancel", handlePointerUp);
+  canvas.addEventListener("contextmenu", event => event.preventDefault());
+
+  window.addEventListener("keydown", event => {
+    if (event.code !== "Space") return;
+    event.preventDefault();
+
+    if (gameState === "playing" && !event.repeat) {
+      spaceDownTime = performance.now();
+    }
+  });
+
+  window.addEventListener("keyup", event => {
+    if (event.code !== "Space") return;
+    event.preventDefault();
+
+    if (gameState === "playing") {
+      const heldTime = performance.now() - spaceDownTime;
+      jump(heldTime >= 180);
+    }
+  });
+
+  // ------------------------------------------------------------
+  // ゲームループ
+  // ------------------------------------------------------------
+  function gameLoop(timestamp) {
+    if (gameState !== "playing") return;
+
+    let dt = (timestamp - previousTime) / 1000;
+    previousTime = timestamp;
+
+    // タブ復帰時などの極端に大きい差分を制限
+    dt = Math.min(Math.max(dt, 0), 0.033);
+
+    update(dt);
+    draw(timestamp / 1000);
+
+    animationId = requestAnimationFrame(gameLoop);
+  }
+
+  function update(dt) {
+    elapsed += dt;
+    remainingTime = Math.max(0, GAME_DURATION - elapsed);
+
+    if (remainingTime <= 0) {
+      endGame("タイムアップ！たくさん集めたね！");
+      return;
+    }
+
+    const speedBoost = 1 + Math.min(elapsed / 240, 0.2);
+    const worldSpeed = settings.speed * speedBoost;
+
+    worldDistance += worldSpeed * dt;
+
+    updatePlayer(dt);
+    updateClouds(dt);
+    updateSpawning(dt);
+    updateEntities(dt, worldSpeed);
+    updateParticles(dt);
+
+    if (feverTimer > 0) {
+      feverTimer = Math.max(0, feverTimer - dt);
+      if (feverTimer === 0) {
+        showMessage("フィーバー終了！");
+      }
+    }
+
+    if (bonusTimer > 0) {
+      bonusTimer = Math.max(0, bonusTimer - dt);
+    }
+
+    if (invincibleTimer > 0) {
+      invincibleTimer = Math.max(0, invincibleTimer - dt);
+    }
+
+    if (damageTimer > 0) {
+      damageTimer = Math.max(0, damageTimer - dt);
+    }
+
+    if (screenShake > 0) {
+      screenShake = Math.max(0, screenShake - dt);
+    }
+
+    bonusCheckTimer -= dt;
+    if (bonusCheckTimer <= 0) {
+      bonusCheckTimer = 11 + Math.random() * 10;
+
+      if (bonusTimer <= 0 && Math.random() < 0.34) {
+        activateBonus();
+      }
+    }
+
+    player.blink -= dt;
+    if (player.blink <= -2.5 - Math.random() * 2) {
+      player.blink = 0.12;
+    }
+
+    updateHud();
+  }
+
+  function updatePlayer(dt) {
+    const gravity = 1900;
+
+    player.vy += gravity * dt;
+    player.y += player.vy * dt;
+
+    const floor = groundY - player.height;
+
+    if (player.y >= floor) {
+      if (!player.grounded && player.vy > 250) {
+        createDust(player.x + player.width / 2, groundY - 2, 10, "#ffe8f1");
+        player.squash = 0.22;
+      }
+
+      player.y = floor;
+      player.vy = 0;
+      player.grounded = true;
+      player.rotation *= Math.pow(0.002, dt);
+    } else {
+      player.grounded = false;
+      player.rotation += dt * 1.7;
+    }
+
+    player.squash = Math.max(0, player.squash - dt);
+  }
+
+  function updateClouds(dt) {
+    for (const cloud of clouds) {
+      cloud.x -= cloud.speed * dt;
+
+      if (cloud.x < -140 * cloud.scale) {
+        cloud.x = width + Math.random() * 170;
+        cloud.y = 70 + Math.random() * Math.max(60, groundY * 0.32);
+      }
+    }
+  }
+
+  // ------------------------------------------------------------
+  // オブジェクト生成
+  // ------------------------------------------------------------
+  function updateSpawning(dt) {
+    spawnTimer -= dt;
+
+    if (spawnTimer > 0) return;
+
+    const bonusFactor = bonusTimer > 0 ? 0.42 : 1;
+    spawnTimer = randomRange(settings.gapMin, settings.gapMax) * bonusFactor;
+
+    const obstacleChance = bonusTimer > 0
+      ? 0.14
+      : 0.38 * settings.obstacleRate;
+
+    if (Math.random() < obstacleChance) {
+      createObstacle();
+    }
+
+    const itemChance = Math.min(
+      0.98,
+      (bonusTimer > 0 ? 1 : 0.79) * settings.candyRate
+    );
+
+    if (Math.random() < itemChance) {
+      createItemPattern();
+    }
+  }
+
+  function createObstacle() {
+    const typeRoll = Math.random();
+    let type = "donut";
+    let obstacleWidth = 55;
+    let obstacleHeight = 55;
+
+    if (typeRoll > 0.67) {
+      type = "cookie";
+      obstacleWidth = 58;
+      obstacleHeight = 52;
+    } else if (typeRoll > 0.34) {
+      type = "chocolate";
+      obstacleWidth = 54;
+      obstacleHeight = 62;
+    }
+
+    obstacles.push({
+      x: width + 80,
+      y: groundY - obstacleHeight,
+      width: obstacleWidth,
+      height: obstacleHeight,
+      type,
+      rotation: Math.random() * 0.2 - 0.1,
+      hit: false
+    });
+  }
+
+  function createItemPattern() {
+    const pattern = Math.floor(Math.random() * 4);
+    const baseX = width + 70;
+    const count = bonusTimer > 0 ? 7 : 3 + Math.floor(Math.random() * 3);
+    const spacing = bonusTimer > 0 ? 45 : 52;
+
+    for (let i = 0; i < count; i++) {
+      let y;
+
+      if (pattern === 0) {
+        y = groundY - 105;
+      } else if (pattern === 1) {
+        y = groundY - 90 - Math.sin((i / Math.max(1, count - 1)) * Math.PI) * 95;
+      } else if (pattern === 2) {
+        y = groundY - 85 - (i % 2) * 65;
+      } else {
+        y = groundY - 120 - i * 12;
+      }
+
+      let type = "candy";
+      const roll = Math.random();
+
+      if (roll < 0.035) {
+        type = "star";
+      } else if (roll < 0.1) {
+        type = "rainbow";
+      }
+
+      items.push({
+        x: baseX + i * spacing,
+        y,
+        width: type === "star" ? 38 : 32,
+        height: type === "star" ? 38 : 32,
+        type,
+        phase: Math.random() * Math.PI * 2,
+        collected: false
+      });
+    }
+  }
+
+  function activateBonus() {
+    bonusTimer = 5;
+    playSound("bonus");
+    showMessage("ボーナスチャンス ×3！");
+
+    for (let row = 0; row < 3; row++) {
+      for (let i = 0; i < 6; i++) {
+        items.push({
+          x: width + 80 + i * 62 + row * 20,
+          y: groundY - 90 - row * 62,
+          width: 32,
+          height: 32,
+          type: Math.random() < 0.12 ? "rainbow" : "candy",
+          phase: Math.random() * Math.PI * 2,
+          collected: false
+        });
+      }
+    }
+  }
+
+  function activateFever() {
+    feverTimer = 10;
+    feverGauge = 0;
+    playSound("fever");
+    showMessage("フィーバーモード ×2！");
+
+    for (let i = 0; i < 50; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: randomRange(-70, 70),
+        vy: randomRange(-150, -40),
+        gravity: 65,
+        life: randomRange(0.8, 1.8),
+        maxLife: 1.8,
+        size: randomRange(4, 9),
+        color: rainbowColor(Math.random()),
+        shape: Math.random() < 0.5 ? "circle" : "star"
+      });
+    }
+  }
+
+  // ------------------------------------------------------------
+  // オブジェクト更新と衝突判定
+  // ------------------------------------------------------------
+  function updateEntities(dt, worldSpeed) {
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      const obstacle = obstacles[i];
+      obstacle.x -= worldSpeed * dt;
+      obstacle.rotation += dt * 0.7;
+
+      if (
+        !obstacle.hit &&
+        damageTimer <= 0 &&
+        invincibleTimer <= 0 &&
+        intersectsPlayer(obstacle, 9)
+      ) {
+        obstacle.hit = true;
+        takeDamage();
+      }
+
+      if (obstacle.x + obstacle.width < -80) {
+        obstacles.splice(i, 1);
+      }
+    }
+
+    for (let i = items.length - 1; i >= 0; i--) {
+      const item = items[i];
+      item.x -= worldSpeed * dt;
+      item.phase += dt * 4;
+
+      if (!item.collected && intersectsPlayer(item, 4)) {
+        item.collected = true;
+        collectItem(item);
+        items.splice(i, 1);
+        continue;
+      }
+
+      if (item.x + item.width < -60) {
+        items.splice(i, 1);
+      }
+    }
+  }
+
+  function intersectsPlayer(entity, padding) {
+    const px = player.x + padding;
+    const py = player.y + padding;
+    const pw = player.width - padding * 2;
+    const ph = player.height - padding * 2;
+
+    return (
+      px < entity.x + entity.width - padding &&
+      px + pw > entity.x + padding &&
+      py < entity.y + entity.height - padding &&
+      py + ph > entity.y + padding
+    );
+  }
+
+  function collectItem(item) {
+    let baseScore = 0;
+
+    if (item.type === "candy") {
+      baseScore = 100;
+      candyCount += 1;
+      feverGauge += 1;
+      playSound("candy");
+    } else if (item.type === "rainbow") {
+      baseScore = 500;
+      candyCount += 1;
+      feverGauge += 2;
+      playSound("rainbow");
+    } else if (item.type === "star") {
+      baseScore = 300;
+      invincibleTimer = Math.max(invincibleTimer, 5);
+      playSound("star");
+      showMessage("5秒間むてき！");
+    }
+
+    const feverMultiplier = feverTimer > 0 ? 2 : 1;
+    const bonusMultiplier = bonusTimer > 0 ? 3 : 1;
+
+    score += Math.round(
+      baseScore *
+      settings.scoreMultiplier *
+      feverMultiplier *
+      bonusMultiplier
+    );
+
+    createBurst(
+      item.x + item.width / 2,
+      item.y + item.height / 2,
+      item.type === "rainbow" ? null : "#fff16b",
+      item.type === "rainbow" ? 20 : 11
+    );
+
+    if (feverGauge >= FEVER_TARGET && feverTimer <= 0) {
+      activateFever();
+    } else {
+      feverGauge = Math.min(feverGauge, FEVER_TARGET);
+    }
+  }
+
+  function takeDamage() {
+    damageTimer = 1.35;
+    lives -= 1;
+    screenShake = 0.3;
+    playSound("damage");
+    createBurst(player.x + player.width / 2, player.y + player.height / 2, "#ff6b89", 18);
+
+    if (lives <= 0) {
+      endGame("ライフがなくなっちゃった！");
+    } else {
+      showMessage("いたっ！ ライフ -" + 1);
+    }
+  }
+
+  // ------------------------------------------------------------
+  // パーティクル
+  // ------------------------------------------------------------
+  function createBurst(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = randomRange(70, 240);
+
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        gravity: 210,
+        life: randomRange(0.45, 0.9),
+        maxLife: 0.9,
+        size: randomRange(3, 8),
+        color: color || rainbowColor(Math.random()),
+        shape: Math.random() < 0.3 ? "star" : "circle"
+      });
+    }
+  }
+
+  function createDust(x, y, count, color) {
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: x + randomRange(-25, 25),
+        y,
+        vx: randomRange(-80, 80),
+        vy: randomRange(-150, -45),
+        gravity: 240,
+        life: randomRange(0.3, 0.65),
+        maxLife: 0.65,
+        size: randomRange(4, 10),
+        color,
+        shape: "circle"
+      });
+    }
+  }
+
+  function updateParticles(dt) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const particle = particles[i];
+
+      particle.life -= dt;
+      particle.vy += particle.gravity * dt;
+      particle.x += particle.vx * dt;
+      particle.y += particle.vy * dt;
+
+      if (particle.life <= 0) {
+        particles.splice(i, 1);
+      }
+    }
+  }
+
+  // ------------------------------------------------------------
+  // HUD
+  // ------------------------------------------------------------
+  function updateHud() {
+    scoreValue.textContent = Math.floor(score).toLocaleString("ja-JP");
+    highScoreValue.textContent = Math.max(highScore, Math.floor(score)).toLocaleString("ja-JP");
+    lifeValue.textContent = "♥".repeat(Math.max(0, lives)) || "0";
+    timeValue.textContent = Math.ceil(remainingTime);
+    difficultyValue.textContent = settings ? settings.label : "ふつう";
+
+    const gaugePercent = feverTimer > 0
+      ? (feverTimer / 10) * 100
+      : (feverGauge / FEVER_TARGET) * 100;
+
+    feverBar.style.width = Math.max(0, Math.min(100, gaugePercent)) + "%";
+  }
+
+  function showMessage(text) {
+    statusMessage.textContent = text;
+    statusMessage.classList.remove("show");
+    void statusMessage.offsetWidth;
+    statusMessage.classList.add("show");
+  }
+
+  // ------------------------------------------------------------
+  // 描画
+  // ------------------------------------------------------------
+  function draw(time) {
+    ctx.save();
+
+    if (screenShake > 0) {
+      const amount = 7 * (screenShake / 0.3);
+      ctx.translate(
+        randomRange(-amount, amount),
+        randomRange(-amount, amount)
+      );
+    }
+
+    drawBackground(time);
+    drawGround(time);
+    drawItems(time);
+    drawObstacles(time);
+    drawPlayer(time);
+    drawParticles();
+
+    if (bonusTimer > 0) {
+      drawBonusOverlay(time);
+    }
+
+    ctx.restore();
+  }
+
+  function drawTitleBackground() {
+    drawBackground(performance.now() / 1000);
+    drawGround(performance.now() / 1000);
+  }
+
+  function drawBackground(time) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, feverTimer > 0 ? "#a993ff" : "#80dcff");
+    gradient.addColorStop(0.58, feverTimer > 0 ? "#ffb7da" : "#dff9ff");
+    gradient.addColorStop(1, "#fff0bd");
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(-20, -20, width + 40, height + 40);
+
+    // フィーバー中の虹色の光
+    if (feverTimer > 0) {
+      const rainbow = ctx.createLinearGradient(0, 0, width, 0);
+      rainbow.addColorStop(0, "rgba(255,90,130,.18)");
+      rainbow.addColorStop(.25, "rgba(255,225,80,.18)");
+      rainbow.addColorStop(.5, "rgba(90,230,155,.18)");
+      rainbow.addColorStop(.75, "rgba(80,185,255,.18)");
+      rainbow.addColorStop(1, "rgba(190,100,255,.18)");
+      ctx.fillStyle = rainbow;
+      ctx.fillRect(0, 0, width, groundY);
+    }
+
+    // 小さなきらめき
+    for (const star of decorativeStars) {
+      const alpha = 0.25 + Math.sin(time * 3 + star.phase) * 0.2;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // 雲
+    for (const cloud of clouds) {
+      drawCloud(cloud.x, cloud.y, cloud.scale);
+    }
+
+    // 遠景のお菓子の山
+    const farOffset = -(worldDistance * 0.08) % 330;
+    for (let x = farOffset - 330; x < width + 330; x += 330) {
+      drawCandyMountain(x, groundY - 90, 1);
+    }
+
+    // 中景のキャンディの木
+    const treeOffset = -(worldDistance * 0.18) % 230;
+    for (let x = treeOffset - 230; x < width + 230; x += 230) {
+      drawCandyTree(
+        x + 95,
+        groundY - 3,
+        0.76 + ((Math.floor(x / 230) & 1) ? 0.15 : 0)
+      );
+    }
+  }
+
+  function drawCloud(x, y, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    ctx.globalAlpha = 0.78;
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.arc(23, 22, 22, 0, Math.PI * 2);
+    ctx.arc(50, 14, 30, 0, Math.PI * 2);
+    ctx.arc(82, 24, 23, 0, Math.PI * 2);
+    ctx.roundRect(14, 20, 78, 31, 16);
+    ctx.fill();
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawCandyMountain(x, baseY, scale) {
+    ctx.save();
+    ctx.translate(x, baseY);
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = "#e1b7ff";
+    ctx.beginPath();
+    ctx.moveTo(0, 90);
+    ctx.quadraticCurveTo(70, -15, 145, 90);
+    ctx.fill();
+
+    ctx.fillStyle = "#f8d3ff";
+    ctx.beginPath();
+    ctx.moveTo(58, 40);
+    ctx.quadraticCurveTo(72, 14, 87, 40);
+    ctx.quadraticCurveTo(74, 35, 58, 40);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffb8cf";
+    ctx.beginPath();
+    ctx.moveTo(120, 90);
+    ctx.quadraticCurveTo(190, 8, 260, 90);
+    ctx.fill();
+
+    ctx.fillStyle = "#fff";
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.arc(70, 55, 6, 0, Math.PI * 2);
+    ctx.arc(184, 56, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawCandyTree(x, baseY, scale) {
+    ctx.save();
+    ctx.translate(x, baseY);
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = "#9b604e";
+    ctx.fillRect(-9, -70, 18, 70);
+
+    ctx.fillStyle = "#fff3da";
+    ctx.beginPath();
+    ctx.arc(0, -96, 41, 0, Math.PI * 2);
+    ctx.fill();
+
+    const colors = ["#ff79ad", "#70d8f5", "#ffd45e", "#9ee68f"];
+    const dots = [
+      [-20, -106], [16, -114], [3, -86], [-23, -79], [25, -88]
+    ];
+
+    dots.forEach((dot, index) => {
+      ctx.fillStyle = colors[index % colors.length];
+      ctx.beginPath();
+      ctx.arc(dot[0], dot[1], 8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.restore();
+  }
+
+  function drawGround(time) {
+    ctx.fillStyle = "#f3c083";
+    ctx.fillRect(0, groundY, width, height - groundY);
+
+    ctx.fillStyle = "#fff7d9";
+    ctx.fillRect(0, groundY, width, 17);
+
+    ctx.fillStyle = "#ffb1cc";
+    const icingOffset = -(worldDistance * 0.55) % 62;
+
+    for (let x = icingOffset - 62; x < width + 62; x += 62) {
+      ctx.beginPath();
+      ctx.arc(x, groundY + 5, 22, 0, Math.PI);
+      ctx.fill();
+    }
+
+    // 地面のカラフルなスプリンクル
+    const sprinkleOffset = -(worldDistance * 0.85) % 90;
+
+    for (let x = sprinkleOffset - 90; x < width + 90; x += 90) {
+      ctx.save();
+      ctx.translate(x + 30, groundY + 42);
+      ctx.rotate(Math.sin(x + time) * 0.7);
+      ctx.fillStyle = "#70d8f5";
+      ctx.fillRect(-7, -2, 14, 4);
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(x + 67, groundY + 70);
+      ctx.rotate(-0.6);
+      ctx.fillStyle = "#ff668f";
+      ctx.fillRect(-7, -2, 14, 4);
+      ctx.restore();
+    }
+
+    // 地面上の走行ライン
+    ctx.strokeStyle = "rgba(145,82,71,.12)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(0, groundY + 100);
+    ctx.lineTo(width, groundY + 100);
+    ctx.stroke();
+  }
+
+  function drawPlayer(time) {
+    const flashing =
+      (damageTimer > 0 || invincibleTimer > 0) &&
+      Math.floor(time * 12) % 2 === 0;
+
+    if (flashing) {
+      ctx.globalAlpha = 0.4;
+    }
+
+    ctx.save();
+    ctx.translate(
+      player.x + player.width / 2,
+      player.y + player.height / 2
+    );
+    ctx.rotate(player.rotation * 0.12);
+
+    let scaleX = 1;
+    let scaleY = 1;
+
+    if (player.squash > 0) {
+      const amount = Math.sin((player.squash / 0.24) * Math.PI);
+      scaleX = 1 + amount * 0.13;
+      scaleY = 1 - amount * 0.13;
+    }
+
+    ctx.scale(scaleX, scaleY);
+
+    if (feverTimer > 0 || invincibleTimer > 0) {
+      ctx.shadowBlur = 25;
+      ctx.shadowColor = feverTimer > 0
+        ? rainbowColor((time * 0.5) % 1)
+        : "#fff45e";
+    }
+
+    // 耳
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "#e4c7cf";
+    ctx.lineWidth = 3;
+
+    drawRoundedEar(-20, -47, -0.18);
+    drawRoundedEar(20, -47, 0.18);
+
+    // 体
+    ctx.beginPath();
+    ctx.ellipse(0, 8, 30, 29, 0, 0, Math.PI * 2);
+
+    if (feverTimer > 0) {
+      const bodyGradient = ctx.createLinearGradient(-30, -20, 30, 35);
+      bodyGradient.addColorStop(0, "#ff809f");
+      bodyGradient.addColorStop(.25, "#ffe16b");
+      bodyGradient.addColorStop(.5, "#8bea9c");
+      bodyGradient.addColorStop(.75, "#7fcfff");
+      bodyGradient.addColorStop(1, "#c28dff");
+      ctx.fillStyle = bodyGradient;
+    } else {
+      ctx.fillStyle = "#fff";
+    }
+
+    ctx.fill();
+    ctx.stroke();
+
+    // お腹の薄い色
+    ctx.fillStyle = "rgba(255,225,235,.55)";
+    ctx.beginPath();
+    ctx.ellipse(0, 19, 23, 13, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 目
+    const eyeHeight = player.blink > 0 ? 2 : 8;
+    ctx.fillStyle = "#70485b";
+    roundRectFill(-14, -2, 6, eyeHeight, 4);
+    roundRectFill(8, -2, 6, eyeHeight, 4);
+
+    // ほっぺ
+    ctx.fillStyle = "#ffacc5";
+    ctx.beginPath();
+    ctx.ellipse(-20, 10, 7, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(20, 10, 7, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 口
+    ctx.strokeStyle = "#70485b";
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(0, 7, 5, 0.15, Math.PI - 0.15);
+    ctx.stroke();
+
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+  }
+
+  function drawRoundedEar(x, y, rotation) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 12, 27, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#fff";
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.ellipse(0, -1, 5, 18, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffb4ce";
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawItems(time) {
+    for (const item of items) {
+      const bob = Math.sin(item.phase) * 5;
+      const x = item.x + item.width / 2;
+      const y = item.y + item.height / 2 + bob;
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(Math.sin(item.phase * 0.55) * 0.18);
+
+      if (item.type === "candy") {
+        drawCandy("#ff79ad", "#fff1f6");
+      } else if (item.type === "rainbow") {
+        drawRainbowCandy(time);
+      } else {
+        drawStar("#ffe562");
+      }
+
+      ctx.restore();
+    }
+  }
+
+  function drawCandy(mainColor, stripeColor) {
+    ctx.fillStyle = mainColor;
+
+    // 包み紙
+    ctx.beginPath();
+    ctx.moveTo(-13, -8);
+    ctx.lineTo(-25, -15);
+    ctx.lineTo(-22, 0);
+    ctx.lineTo(-25, 15);
+    ctx.lineTo(-13, 8);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(13, -8);
+    ctx.lineTo(25, -15);
+    ctx.lineTo(22, 0);
+    ctx.lineTo(25, 15);
+    ctx.lineTo(13, 8);
+    ctx.closePath();
+    ctx.fill();
+
+    // 中央
+    ctx.fillStyle = mainColor;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 16, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.strokeStyle = stripeColor;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(-7, -11);
+    ctx.lineTo(7, 11);
+    ctx.stroke();
+  }
+
+  function drawRainbowCandy(time) {
+    const gradient = ctx.createLinearGradient(-16, -16, 16, 16);
+    gradient.addColorStop(0, "#ff668f");
+    gradient.addColorStop(.25, "#ffd85e");
+    gradient.addColorStop(.5, "#74e695");
+    gradient.addColorStop(.75, "#67cfff");
+    gradient.addColorStop(1, "#bb7cff");
+
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = rainbowColor((time * 0.6) % 1);
+    drawCandyWithGradient(gradient);
+    ctx.shadowBlur = 0;
+  }
+
+  function drawCandyWithGradient(gradient) {
+    ctx.fillStyle = gradient;
+
+    ctx.beginPath();
+    ctx.moveTo(-13, -8);
+    ctx.lineTo(-25, -15);
+    ctx.lineTo(-22, 0);
+    ctx.lineTo(-25, 15);
+    ctx.lineTo(-13, 8);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(13, -8);
+    ctx.lineTo(25, -15);
+    ctx.lineTo(22, 0);
+    ctx.lineTo(25, 15);
+    ctx.lineTo(13, 8);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 16, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(255,255,255,.8)";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-7, -10);
+    ctx.lineTo(7, 10);
+    ctx.stroke();
+  }
+
+  function drawStar(color) {
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = color;
+    ctx.fillStyle = color;
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
+
+    createStarPath(0, 0, 18, 8, 5);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#70485b";
+    ctx.beginPath();
+    ctx.arc(-5, -1, 1.8, 0, Math.PI * 2);
+    ctx.arc(5, -1, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawObstacles() {
+    for (const obstacle of obstacles) {
+      ctx.save();
+      ctx.translate(
+        obstacle.x + obstacle.width / 2,
+        obstacle.y + obstacle.height / 2
+      );
+      ctx.rotate(obstacle.rotation);
+
+      if (obstacle.hit) {
+        ctx.globalAlpha = 0.43;
+      }
+
+      if (obstacle.type === "donut") {
+        drawDonut();
+      } else if (obstacle.type === "cookie") {
+        drawCookie();
+      } else {
+        drawChocolate();
+      }
+
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawDonut() {
+    ctx.fillStyle = "#d9905c";
+    ctx.strokeStyle = "#8e593b";
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, 25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#ff7eae";
+    ctx.beginPath();
+    ctx.arc(0, -3, 22, Math.PI, 0);
+    ctx.quadraticCurveTo(18, 13, 9, 8);
+    ctx.quadraticCurveTo(0, 16, -8, 8);
+    ctx.quadraticCurveTo(-17, 15, -22, 0);
+    ctx.fill();
+
+    ctx.fillStyle = "#bceeff";
+    ctx.beginPath();
+    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    const sprinkles = [
+      [-12,-10,.2,"#fff25e"],[10,-12,-.5,"#70d8f5"],
+      [-14,2,-.3,"#fff"],[13,3,.4,"#8eff9d"],[2,-16,.8,"#b57bff"]
+    ];
+
+    for (const sprinkle of sprinkles) {
+      ctx.save();
+      ctx.translate(sprinkle[0], sprinkle[1]);
+      ctx.rotate(sprinkle[2]);
+      ctx.fillStyle = sprinkle[3];
+      ctx.fillRect(-4, -1.5, 8, 3);
+      ctx.restore();
+    }
+  }
+
+  function drawCookie() {
+    ctx.fillStyle = "#c9894e";
+    ctx.strokeStyle = "#8b5636";
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, 26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    const chips = [
+      [-10,-10,5],[9,-13,4],[13,7,5],[-8,12,4],[0,0,3]
+    ];
+
+    ctx.fillStyle = "#714533";
+    for (const chip of chips) {
+      ctx.beginPath();
+      ctx.arc(chip[0], chip[1], chip[2], 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawChocolate() {
+    ctx.fillStyle = "#714533";
+    ctx.strokeStyle = "#4e2d28";
+    ctx.lineWidth = 3;
+    roundRectFill(-25, -30, 50, 60, 8);
+    ctx.strokeRect(-23, -28, 46, 56);
+
+    ctx.strokeStyle = "#a76a50";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, -27);
+    ctx.lineTo(0, 27);
+    ctx.moveTo(-22, -10);
+    ctx.lineTo(22, -10);
+    ctx.moveTo(-22, 10);
+    ctx.lineTo(22, 10);
+    ctx.stroke();
+  }
+
+  function drawParticles() {
+    for (const particle of particles) {
+      const alpha = Math.max(0, particle.life / particle.maxLife);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(particle.x, particle.y);
+      ctx.fillStyle = particle.color;
+
+      if (particle.shape === "star") {
+        createStarPath(0, 0, particle.size, particle.size * 0.45, 5);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(0, 0, particle.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawBonusOverlay(time) {
+    ctx.save();
+    ctx.globalAlpha = 0.11 + Math.sin(time * 8) * 0.035;
+    ctx.fillStyle = "#fff35f";
+
+    for (letx = -height; x < width + height; x += 100) {
+      ctx.beginPath();
+      ctx.moveTo(x + (time * 120) % 100, 0);
+      ctx.lineTo(x + 42 + (time * 120) % 100, 0);
+      ctx.lineTo(x + height + 42 + (time * 120) % 100, height);
+      ctx.lineTo(x + height + (time * 120) % 100, height);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  // ------------------------------------------------------------
+  // 汎用描画・計算関数
+  // ------------------------------------------------------------
+  function roundRectFill(x, y, w, h, radius) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, radius);
+    ctx.fill();
+  }
+
+  function createStarPath(x, y, outerRadius, innerRadius, points) {
+    ctx.beginPath();
+
+    for (let i = 0; i < points * 2; i++) {
+      const radius = i % 2 === 0 ? outerRadius : innerRadius;
+      const angle = -Math.PI / 2 + (Math.PI * i) / points;
+      const px = x + Math.cos(angle) * radius;
+      const py = y + Math.sin(angle) * radius;
+
+      if (i === 0) {
+        ctx.moveTo(px, py);
+      } else {
+        ctx.lineTo(px, py);
+      }
+    }
+
+    ctx.closePath();
+  }
+
+  function randomRange(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function rainbowColor(position) {
+    return `hsl(${Math.floor(position * 360)}, 88%, 67%)`;
+  }
+
+  // ------------------------------------------------------------
+  // ブラウザのスクロールやダブルタップ拡大を防止
+  // ------------------------------------------------------------
+  document.addEventListener("touchmove", event => {
+    if (gameState === "playing") {
+      event.preventDefault();
+    }
+  }, { passive: false });
+
+  document.addEventListener("dblclick", event => {
+    event.preventDefault();
+  });
+
+  // ページが非表示になった場合は時間差をリセット
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && gameState === "playing") {
+      previousTime = performance.now();
+    }
+  });
+
+  // 初期化
+  resizeCanvas();
+  highScoreValue.textContent = highScore.toLocaleString("ja-JP");
+  drawTitleBackground();
+})();
+</script>
+</body>
+</html>
